@@ -242,6 +242,52 @@
                 </messages>
                 <updatedAt value="2024-07-15T23:33:03.6453574" />
               </chat>
+              <chat>
+                <internalId value="76b60d9d-811e-4044-b1cd-c05ad9cd39ef" />
+                <llm>
+                  <llm>
+                    <model value="openai/gpt-4o" />
+                    <provider value="OpenAI" />
+                    <title value="GPT-4o" />
+                  </llm>
+                </llm>
+              </chat>
+              <chat>
+                <internalId value="051a538d-97e4-4246-9d50-952f6c51a3ff" />
+                <llm>
+                  <llm>
+                    <model value="openai/gpt-4o" />
+                    <provider value="OpenAI" />
+                    <title value="GPT-4o" />
+                  </llm>
+                </llm>
+                <messages>
+                  <list>
+                    <message>
+                      <speaker value="HUMAN" />
+                      <text value="NotFoundError: Error code: 404 - {'error': {'message': &amp;quot;No assistant found with id 'asst_WJoKPrT0cglwpzFtepgSqhPQ'.&amp;quot;, 'type': 'invalid_request_error', 'param': None, 'code': None}}" />
+                    </message>
+                    <message>
+                      <speaker value="ASSISTANT" />
+                      <text value="The error message you're seeing, `NotFoundError: Error code: 404 - {'error': {'message': &quot;No assistant found with id 'asst_WJoKPrT0cglwpzFtepgSqhPQ'.&quot;, 'type': 'invalid_request_error', 'param': None, 'code': None}}`, indicates that the system attempted to access an assistant with the ID `asst_WJoKPrT0cglwpzFtepgSqhPQ`, but it could not be found.&#10;&#10;Here are a few steps you can take to troubleshoot and resolve this issue:&#10;&#10;1. **Verify the Assistant ID**: Ensure that the assistant ID you are using is correct. There might be a typo or the ID might have been copied incorrectly.&#10;&#10;2. **Check Assistant Existence**: Confirm that the assistant with the given ID actually exists in your system. You might need to query your database or use an API endpoint to list all available assistants and verify the presence of the specified ID.&#10;&#10;3. **Permissions and Access**: Ensure that the system or user making the request has the necessary permissions to access the assistant. Sometimes, a 404 error can occur if the resource exists but is not accessible due to permission issues.&#10;&#10;4. **Logs and Monitoring**: Check the logs and monitoring tools for any additional context or related errors that might provide more insight into why the assistant could not be found.&#10;&#10;5. **API Documentation**: Refer to the API documentation to ensure that you are using the correct endpoint and request format. There might be specific requirements or constraints that need to be met.&#10;&#10;6. **Contact Support**: If you have verified all the above and still cannot resolve the issue, consider reaching out to the support team for the platform or service you are using. They might be able to provide more detailed assistance.&#10;&#10;If you provide more context or code snippets related to how you are making the request, I can offer more specific guidance." />
+                    </message>
+                  </list>
+                </messages>
+                <updatedAt value="2024-07-17T00:02:38.2966553" />
+              </chat>
+              <chat>
+                <internalId value="8d90edcb-38f4-4e95-aa64-4ffc5fce9c77" />
+                <llm>
+                  <llm>
+                    <model value="openai/gpt-4o" />
+                    <provider value="OpenAI" />
+                    <title value="GPT-4o" />
+                  </llm>
+                </llm>
+              </chat>
+              <chat>
+                <internalId value="4ddc926a-5c04-4030-8d34-776a16989cd6" />
+              </chat>
             </list>
           </chats>
           <defaultLlm>
