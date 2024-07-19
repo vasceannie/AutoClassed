@@ -33,7 +33,7 @@ def connect_to_db(db_file_path: str) -> sqlite3.Connection:
         raise
 
 # Example usage
-db_file = "data/spend_intake.db"
+db_file = "spend_intake.db"
 conn = connect_to_db(db_file)
 df = pd.read_sql_query("SELECT * FROM supplier_classifications", conn)
 conn.close()

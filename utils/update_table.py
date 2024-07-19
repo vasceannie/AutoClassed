@@ -1,30 +1,36 @@
-import pandas as pd
 import sqlite3
-import os
 
 
-def update_supplier_classifications(data_frame: pd.DataFrame) -> None:
+def update_supplier_classifications_table():
     """
-    Updates the 'supplier_classifications' table in the SQLite database.
-
-    Args:
-        data_frame (pd.DataFrame): The DataFrame containing the data to be inserted.
-
-    Returns:
-        None
+    Flush the supplier_classifications table and repopulate it with the supplier id and name
+    from the spend_data_raw table. The id that appear in the supplier_classifications table should be distinct.
     """
-    relevant_columns = ["supplier_id", "supplier_name"]
-    df_suppliers = data_frame[relevant_columns].drop_duplicates()
 
-    db_path = os.path.join(os.path.dirname(__file__), "../data/spend_intake.db")
-    with sqlite3.connect(db_path) as connection:
-        cursor = connection.cursor()
-        insert_sql = """
-        INSERT INTO supplier_classifications (supplier_id, supplier_name)
-        VALUES (?, ?)
-        ON CONFLICT(supplier_id) DO UPDATE SET supplier_name=excluded.supplier_name;
+    try:
+        # Connect to the SQLite database
+        db_file_path = "../spend_intake.db"
+        conn = sqlite3.connect(db_file_path)
+        cursor = conn.cursor()
+
+        # Flush the table
+        cursor.execute("DELETE FROM supplier_classifications")
+
+        # Populate the table with distinct supplier id and name
+        insert_query = """
+            INSERT INTO supplier_classifications (supplier_id, supplier_name)
+            SELECT DISTINCT supplier_id, supplier_name
+            FROM spend_data_raw
         """
-        data_to_insert = df_suppliers.itertuples(index=False, name=None)
-        cursor.executemany(insert_sql, data_to_insert)
+        cursor.execute(insert_query)
 
-    print("Data has been inserted into 'supplier_classifications' table successfully.")
+        # Commit the changes and close the connection
+        conn.commit()
+        conn.close()
+
+    except sqlite3.Error as e:
+        print(f"An error occurred: {e}")
+        conn.rollback()
+
+
+update_supplier_classifications_table()
