@@ -1,0 +1,17 @@
+[[pages]]
+path = "main.py"
+name = "Data Explorer"
+icon = "🎈️️"
+is_section = false
+
+[[pages]]
+path = "other_pages/profile.py"
+name = "Staging"
+icon = ":books:"
+is_section = false
+
+[[pages]]
+path = "other_pages/chat.py"
+name = "Chat"
+icon = ":arrow_up_small:"
+is_section = false

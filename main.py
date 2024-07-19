@@ -1,46 +1,90 @@
 import streamlit as st
-import streamlit_shadcn_ui as sui
+import streamlit_shadcn_ui as stscn
+from pandas import DataFrame
 from pygwalker.api.streamlit import StreamlitRenderer
-import numpy as np
 import pandas as pd
+from st_pages import show_pages_from_config, add_page_title
+import sqlite3
 
-st.title("RiseNow Intelligent Data Inspector")
+
+def connect_to_database(db_file_path: str) -> sqlite3.Connection:
+    """
+    Connects to the SQLite database.
+
+    Args:
+        db_file_path (str): The path to the SQLite database file.
+
+    Returns:
+        sqlite3.Connection: The database connection.
+    """
+    try:
+        return sqlite3.connect(db_file_path)
+    except Exception as e:
+        st.error(f"Error connecting to database: {e}")
+        raise
+
+
+def import_data_from_db(db_name: str, conn: sqlite3.Connection) -> pd.DataFrame:
+    """
+    Imports cleaned data from the database.
+
+    Args:
+        db_name (str): The name of the database.
+        conn (sqlite3.Connection): The database connection.
+
+    Returns:
+        pandas.DataFrame: The cleaned data.
+    """
+    try:
+        df = pd.read_sql_query(f"SELECT * FROM main.{db_name}", conn)
+        if df is None or df.empty:
+            raise ValueError("No data returned from SQL query")
+        return df
+    except sqlite3.OperationalError as e:
+        st.error(f"Error executing SQL query: {e}")
+        raise
 
 
 @st.cache_data
-def clean_messy_csv(file_path):
+def load_clean_data(db_file_path: str, db_name: str) -> DataFrame | None:
     """
-    Reads a CSV file with tab-separated values, cleans it, and returns a pandas DataFrame.
+    Loads cleaned data from the database.
 
-    Parameters:
-    file_path (str): The path to the CSV file.
+    Args:
+        db_file_path (str): The path to the SQLite database file.
+        db_name (str): The name of the database.
 
     Returns:
-    pd.DataFrame: Cleaned data as a pandas DataFrame.
+        pandas.DataFrame: The cleaned data.
     """
-    # Read the file as a text file to manually process the lines
-    with open(
-        file_path, "r", encoding="utf-8"
-    ) as file:  # Added encoding to handle potential UnicodeDecodeErrors
-        lines = file.readlines()
-
-    # Split the header and data lines
-    header = lines[0].strip().split("\t")
-    data_lines = [line.strip().split("\t") for line in lines[1:]]
-
-    # Create a DataFrame from the processed data
-    cleaned_data = pd.DataFrame(data_lines, columns=header)
-
-    # Remove any leading/trailing whitespace characters from the headers
-    cleaned_data.columns = cleaned_data.columns.str.strip()
-
-    # Optionally, remove any rows with entirely empty values
-    cleaned_data.dropna(how="all", inplace=True)
-
-    return cleaned_data
+    try:
+        conn = connect_to_database(db_file_path)
+        clean_data = import_data_from_db(db_name, conn)
+        conn.close()
+        return clean_data
+    except Exception as e:
+        st.error(f"Error loading clean data: {e}")
+        return None
 
 
-# Now, let's use the function and display the first few rows of the cleaned DataFrame
-clean_data = clean_messy_csv("data/Spend_Intake_010124_063024.csv")
-pyg_app = StreamlitRenderer(clean_data)
-pyg_app.explorer()
+def main():
+    """
+    The main function.
+    """
+    st.title("Data Explorer", anchor=None, help=None)
+    show_pages_from_config()
+
+    db_file_path = "data/spend_intake.db"
+    db_name = "spend_data_raw"
+
+    with st.spinner("Loading clean data..."):
+        clean_data = load_clean_data(db_file_path, db_name)
+    if clean_data is not None:
+        with st.spinner("Loading data explorer..."):
+            StreamlitRenderer(clean_data).explorer()
+    else:
+        st.error("Error loading clean data")
+
+
+if __name__ == "__main__":
+    main()
