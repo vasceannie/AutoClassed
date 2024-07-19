@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project version="4">
-  <component name="DdlMappings">
-    <mapping uuid="14a1da82-e5f0-45f9-8f93-a37b62293b01" name="spend_intake Mapping">
-      <data-sources db="4ed49880-4b82-4eac-b3ad-e0b55fccac86" ddl="ff55f448-e5a0-457a-9dfd-f4a070f82e32" />
-    </mapping>
-  </component>
-</project>
