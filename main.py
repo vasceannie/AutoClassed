@@ -74,7 +74,7 @@ def main():
     st.title("Data Explorer", anchor=None, help=None)
     show_pages_from_config()
 
-    db_file_path = "data/spend_intake.db"
+    db_file_path = "spend_intake.db"
     db_name = "spend_data_raw"
 
     with st.spinner("Loading clean data..."):

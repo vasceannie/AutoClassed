@@ -5,7 +5,7 @@ import os
 def add_timestamp_column():
     # Use an absolute path
     global conn
-    db_path = os.path.abspath("../data/spend_intake.db")
+    db_path = os.path.abspath("../spend_intake.db")
 
     # Check if the database file exists
     if not os.path.exists(db_path):
