@@ -1,29 +1,14 @@
 import inspect
-import sqlite3
-import streamlit as st
-import pandas as pd
-from streamlit_extras.stoggle import stoggle
-from openai.types.beta import Thread
-from st_aggrid import AgGrid
-from openai import OpenAI
-import os
-import streamlit_shadcn_ui as ui
-import time
-from typing_extensions import override
-from utils import (
-    initialise_session_state,
-    render_custom_css,
-    retrieve_messages_from_thread,
-    EventHandler,
-)
-import os
 import json
-from streamlit_extras.echo_expander import echo_expander
 import logging
-from typing import Optional
+import os
+import sqlite3
 import threading
+import time
+import pandas as pd
+import streamlit as st
 from openai import OpenAI
-from openai.types.beta.threads import Message
+from st_aggrid import AgGrid
 
 gridOptions = {
     "columnDefs": [
@@ -260,35 +245,47 @@ def main(threads, df):
                     st.json(json.dumps(gridOptions), expanded=False)
     with tabb:
         with st.container(border=True):
-            st.markdown("""
+            st.markdown(
+                """
             ### Introduction: Setting Up OpenAI API Key and Assistant ID
     
             To use the OpenAI API in your application, you need to obtain an API key and an Assistant ID. This guide will walk you through the process of obtaining these credentials and setting them up as environment variables in your system.
-            """)
+            """
+            )
             step1, step2, step3 = st.tabs(
-                ["Step 1: Obtain Your OpenAI API Key", "Step 2: Find Your Assistant ID", "Step 3: Set Environment "
-                                                                                         "Variables"]
+                [
+                    "Step 1: Obtain Your OpenAI API Key",
+                    "Step 2: Find Your Assistant ID",
+                    "Step 3: Set Environment " "Variables",
+                ]
             )
             with step1:
-                st.markdown("""
+                st.markdown(
+                    """
                 #### Step 1: Obtain Your OpenAI API Key
                 1. **Sign Up or Log In**: Visit the [OpenAI website](https://www.openai.com) and sign up for an account or log in if you already have one.
                 2. **Access the API Key**: After logging in, navigate to the API section of your account. Here, you will find the option to create a new API key.
                 3. **Create a New API Key**: Click on the "Create new secret key" button. Copy the generated API key and store it securely.
-                """)
+                """
+                )
             with step2:
-                st.markdown("""
+                st.markdown(
+                    """
                 #### Step 2: Find Your Assistant ID
                 1. **Create or Access an Assistant**: In the OpenAI dashboard, go to the Assistants section. If you haven't created an assistant yet, create one by following the prompts.
                 2. **Locate the Assistant ID**: After creating or selecting your assistant, you will see the Assistant ID in the assistant's settings or details page. Copy the Assistant ID.
-                """)
+                """
+                )
             with step3:
-                st.markdown("""
+                st.markdown(
+                    """
                 #### Step 3: Set Environment Variables
                 To securely store your OpenAI API key and Assistant ID, set them as environment variables in your operating system. This will allow your application to access these credentials without hardcoding them into your scripts.
-                """)
+                """
+                )
                 with st.expander("For Windows", expanded=False):
-                    st.markdown("""
+                    st.markdown(
+                        """
                 1. **Open System Properties**: Right-click on `This PC` or `My Computer` on your desktop or in File Explorer. Select `Properties`.
                 2. **Advanced System Settings**: Click on `Advanced system settings` on the left.
                 3. **Environment Variables**: In the System Properties window, click the `Environment Variables` button.
@@ -300,14 +297,16 @@ def main(threads, df):
                     """
                     )
                 with st.expander("For macOS and Linux"):
-                    st.markdown("""
+                    st.markdown(
+                        """
                 1. **Open Terminal**: Launch the terminal application.
                 2. **Edit Profile**: Open your profile file in a text editor. Depending on your shell, this file could be `~/.bashrc`, `~/.bash_profile`, `~/.zshrc`, or another file.
                 3. **Add Environment Variables**: Add the following lines to your profile file:
                    ```sh
                    export OPENAI_API_KEY="sk-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
                    export ASSISTANT_ID="assist-XXXXXXXXXXXXXXXXXXXXXXXX"
-                   ```""")
+                   ```"""
+                    )
         supplier_id = get_supplier_id()
         if st.button("Submit"):
             with st.container(border=True):
