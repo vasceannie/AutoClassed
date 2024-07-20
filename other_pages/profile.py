@@ -1,49 +1,29 @@
+import inspect
 import sqlite3
 import streamlit as st
 import pandas as pd
+from streamlit_extras.stoggle import stoggle
+from openai.types.beta import Thread
 from st_aggrid import AgGrid
 from openai import OpenAI
 import os
 import streamlit_shadcn_ui as ui
 import time
 from typing_extensions import override
-from utils import initialise_session_state, render_custom_css, retrieve_messages_from_thread, EventHandler
-
-
-def connect_to_db(db_file_path: str) -> sqlite3.Connection:
-    """
-    Connects to the SQLite database.
-
-    Args:
-        db_file_path (str): The path to the SQLite database file.
-
-    Returns:
-        sqlite3.Connection: The database connection.
-    """
-    try:
-        # Check if the file exists
-        if not os.path.exists(db_file_path):
-            raise FileNotFoundError(f"Database file not found: {db_file_path}")
-
-        # Check if the path is too long
-        if len(db_file_path) > 255:
-            raise ValueError("Database file path is too long")
-
-        # Attempt to connect to the database
-        return sqlite3.connect(db_file_path)
-    except sqlite3.Error as e:
-        st.error(f"SQLite error: {e}")
-        raise
-    except Exception as e:
-        st.error(f"Error connecting to database: {e}")
-        raise
-
-
-# Example usage
-db_file = "spend_intake.db"
-conn = connect_to_db(db_file)
-df = pd.read_sql_query("SELECT * FROM supplier_classifications", conn)
-conn.close()
+from utils import (
+    initialise_session_state,
+    render_custom_css,
+    retrieve_messages_from_thread,
+    EventHandler,
+)
+import os
+import json
+from streamlit_extras.echo_expander import echo_expander
+import logging
+from typing import Optional
+import threading
+from openai import OpenAI
+from openai.types.beta.threads import Message
 
 gridOptions = {
     "columnDefs": [
@@ -51,9 +31,16 @@ gridOptions = {
         {"field": "supplier_id", "headerName": "Supplier ID", "width": 100},
         {"field": "supplier_name", "headerName": "Supplier Name", "width": 300},
         {"field": "valid", "headerName": "Is Valid", "width": 100},
-        {"field": "classification_code", "headerName": "Supplier Class Code", "width": 250},
-        {"field": "classification_name", "headerName": "Supplier Classification Description",
-         "width": 250},
+        {
+            "field": "classification_code",
+            "headerName": "Supplier Class Code",
+            "width": 250,
+        },
+        {
+            "field": "classification_name",
+            "headerName": "Supplier Classification Description",
+            "width": 250,
+        },
         {"field": "comments", "headerName": "Comments", "width": 300},
     ],
     "enableRangeSelection": True,
@@ -129,119 +116,235 @@ options = {
     "foldStyle": "markbegin",
     "enableLiveAutocompletion": True,
 }
-# st.dataframe(df)
-AgGrid(data=df, gridOptions=gridOptions, customButtons=custom_buttons, options=options)
+
+
+def connect_to_db(db_file_path: str) -> sqlite3.Connection:
+    try:
+        # Check if the file exists
+        if not os.path.exists(db_file_path):
+            raise FileNotFoundError(f"Database file not found: {db_file_path}")
+
+        # Check if the path is too long
+        if len(db_file_path) > 255:
+            raise ValueError("Database file path is too long")
+
+        # Attempt to connect to the database
+        return sqlite3.connect(db_file_path)
+    except sqlite3.Error as e:
+        st.error(f"SQLite error: {e}")
+        raise
+    except Exception as e:
+        st.error(f"Error connecting to database: {e}")
+        raise
+
 
 # Get secrets
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-ASSISTANT_ID = os.environ.get("OPENAI_ASSISTANT_ID")
+ASSISTANT_ID = os.environ.get("ASSISTANT_ID")
 
 # Initialise the OpenAI client, and retrieve the assistant
 client = OpenAI(api_key=OPENAI_API_KEY)
 assistant = client.beta.assistants.retrieve(ASSISTANT_ID)
 
-initialise_session_state()
+
+def create_thread():
+    return client.beta.threads.create()
 
 
-def display_buttons():
-    """
-    Displays buttons in the sidebar.
-    """
-    if client:
-        ui.button(
-            text="Missing API Key",
-            key="styled_btn_tailwind",
-            className="bg-red-500 text-white",
-        )
-    else:
-        ui.button(
-            text="OpenAI API Key Loaded",
-            key="styled_btn_tailwind",
-            className="bg-orange-500 text-white"
-        )
+def initialize_thread_id():
+    if "thread_id" not in st.session_state:
+        thread = create_thread()
+        st.session_state.thread_id = thread.id
 
 
-with st.sidebar:
-    display_buttons()
-
-if "thread_id" not in st.session_state:
-    thread = client.beta.threads.create()
-    st.session_state.thread_id = thread.id
-    print(f"Created new thread: \t {st.session_state.thread_id}")
+def get_supplier_id():
+    return st.text_input("Enter Supplier ID")
 
 
-def create_message(supplier_name, thread_id):
-    """
-    Creates a message with the OpenAI API.
-    """
-    client.beta.threads.messages.create(
-        thread_id=st.session_state.thread_id,
-        role="user",
-        content=f"Please respond in JSON with a confirmation of validity, UNSPSC classification code, and description "
-                f"for {supplier_name}.",
+def get_supplier_name(supplier_id, df):
+    return df.loc[df["supplier_id"] == supplier_id, "supplier_name"].values[0]
+
+
+def start_supplier_processing(supplier_name, thread_id):
+    threads[thread_id] = {"active": True, "output": None}
+    thread = threading.Thread(
+        target=process_supplier_result, args=(supplier_name, thread_id, df)
     )
+    thread.start()
+    threads[thread_id]["thread"] = thread
 
 
-with st.form(key='single_supplier_lookup'):
-    supplier_id = st.text_input("Supplier ID")
-    submitted = st.form_submit_button("Submit")
-
-if submitted:
-    with st.spinner('Waiting for response...'):
-        create_message(supplier_id, st.session_state.thread_id)
-
-        with client.beta.threads.runs.stream(thread_id=st.session_state.thread_id,
-                                             assistant_id=assistant.id,
-                                             tool_choice={"type": "code_interpreter"},
-                                             event_handler=EventHandler(),
-                                             temperature=0) as stream:
-            stream.until_done()
-            st.toast("Ding! Fries are done.", icon=":fries:")
-
-    with st.spinner("Preparing the files for download..."):
-        # Retrieve the messages by the Assistant from the thread
-        assistant_messages = retrieve_messages_from_thread(st.session_state.thread_id)
+def process_supplier_result(thread_id, output, df):
+    if "error" in output:
+        st.error(f"Error: {output['error']}")
+    else:
+        st.success(f"Classification Completed: {output}")
+        update_supplier_data(output, df)
 
 
-def create_run(thread_id):
-    run = client.beta.threads.runs.create(thread_id=thread_id, assistant_id="asst_uNaXtdhXVuAfgee33jtenfbg")
-    return run
-
-
-def wait_on_run(run, thread):
-    while run.status == "queued" or run.status == "in_progress":
-        run = client.beta.threads.runs.retrieve(
-            thread_id=thread.id,
-            run_id=run.id,
+def update_supplier_data(output, df):
+    try:
+        df.loc[df["supplier_id"] == output["supplier_id"], "classification_code"] = (
+            output["classification_code"]
         )
-        time.sleep(0.5)
-    return run
+        df.loc[df["supplier_id"] == output["supplier_id"], "classification_name"] = (
+            output["classification_name"]
+        )
+        df.loc[df["supplier_id"] == output["supplier_id"], "valid"] = output["validity"]
+        df.loc[df["supplier_id"] == output["supplier_id"], "comments"] = output[
+            "comments"
+        ]
+    except KeyError:
+        st.error("Supplier ID not found in the DataFrame")
 
 
-def single_supplier_query(supplier_id):
-    # Get the supplier name
-    matching_suppliers = df.loc[df['supplier_id'] == supplier_id, 'supplier_name']
+code = """
+               import pandas as pd
 
-    if matching_suppliers.empty:
-        raise ValueError("Supplier not found.")
 
-    supplier_name = matching_suppliers.values[0]
+    db_file = "spend_intake.db"
+    conn = connect_to_db(db_file)
+    df = pd.read_sql_query("SELECT * FROM supplier_classifications", conn)
+    conn.close()
+                """
 
-    # Create a thread
-    thread = create_thread()
 
-    if thread is None:
-        raise ValueError("Failed to create thread.")
+def main(threads, df):
+    initialize_thread_id()
+    st.title("Tutorial: Optimizing Data for GPT", anchor=None, help=None)
+    taba, tabb = st.tabs(["Data Preparation", "Query OpenAI"])
+    with taba:
+        st.header("Creating a condensed view of our working data:")
+        AgGrid(
+            data=df,
+            gridOptions=gridOptions,
+            customButtons=custom_buttons,
+            options=options,
+        )
+        with st.expander("View Explanation"):
+            with st.container():
+                tab1, tab2, tab3 = st.tabs(
+                    ["Import Database", "Extract into Dataframe", "Display Table"]
+                )
+                with tab1:
+                    st.markdown(
+                        "We begin by using `import sqlite3` and `import os` to define a function that will "
+                        "establish a connection with our database and return a cursor object. This will be used to execute queries against the database:"
+                    )
+                    function_code = inspect.getsource(connect_to_db)
+                    st.code(function_code, language="python")
+                with tab2:
+                    st.markdown(
+                        "Now we use the `pandas` library to execute a query against the database, then store the results "
+                        "in a pandas dataframe:"
+                    )
+                    st.code(code, language="python")
+                with tab3:
+                    st.markdown(
+                        "Finally, we use the `ag_grid` library to display the dataframe in a table:"
+                    )
+                    st.code(
+                        """AgGrid(
+            data=df, gridOptions=gridOptions, customButtons=custom_buttons, options=options
+        )""",
+                        language="python",
+                    )
+                    st.markdown(
+                        "Note that AgGrid is a wrapper for another library that entails many parameters and arguments for its rendering"
+                    )
+                    st.text("gridOptions Configuration:")
+                    st.json(json.dumps(gridOptions), expanded=False)
+                    st.text("CustomButtons Configuration:")
+                    st.json(json.dumps(custom_buttons), expanded=False)
+                    st.text("Options Configuration:")
+                    st.json(json.dumps(gridOptions), expanded=False)
+    with tabb:
+        with st.container(border=True):
+            st.markdown("""
+            ### Introduction: Setting Up OpenAI API Key and Assistant ID
+    
+            To use the OpenAI API in your application, you need to obtain an API key and an Assistant ID. This guide will walk you through the process of obtaining these credentials and setting them up as environment variables in your system.
+            """)
+            step1, step2, step3 = st.tabs(
+                ["Step 1: Obtain Your OpenAI API Key", "Step 2: Find Your Assistant ID", "Step 3: Set Environment "
+                                                                                         "Variables"]
+            )
+            with step1:
+                st.markdown("""
+                #### Step 1: Obtain Your OpenAI API Key
+                1. **Sign Up or Log In**: Visit the [OpenAI website](https://www.openai.com) and sign up for an account or log in if you already have one.
+                2. **Access the API Key**: After logging in, navigate to the API section of your account. Here, you will find the option to create a new API key.
+                3. **Create a New API Key**: Click on the "Create new secret key" button. Copy the generated API key and store it securely.
+                """)
+            with step2:
+                st.markdown("""
+                #### Step 2: Find Your Assistant ID
+                1. **Create or Access an Assistant**: In the OpenAI dashboard, go to the Assistants section. If you haven't created an assistant yet, create one by following the prompts.
+                2. **Locate the Assistant ID**: After creating or selecting your assistant, you will see the Assistant ID in the assistant's settings or details page. Copy the Assistant ID.
+                """)
+            with step3:
+                st.markdown("""
+                #### Step 3: Set Environment Variables
+                To securely store your OpenAI API key and Assistant ID, set them as environment variables in your operating system. This will allow your application to access these credentials without hardcoding them into your scripts.
+                """)
+                with st.expander("For Windows", expanded=False):
+                    st.markdown("""
+                1. **Open System Properties**: Right-click on `This PC` or `My Computer` on your desktop or in File Explorer. Select `Properties`.
+                2. **Advanced System Settings**: Click on `Advanced system settings` on the left.
+                3. **Environment Variables**: In the System Properties window, click the `Environment Variables` button.
+                4. **New Environment Variable**: Under `User variables` or `System variables`, click `New` and add the following variables:
+                   - **Variable name**: `OPENAI_API_KEY`
+                   - **Variable value**: Your API key (e.g., `sk-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX`)
+                   - **Variable name**: `ASSISTANT_ID`
+                   - **Variable value**: Your Assistant ID (e.g., `assist-XXXXXXXXXXXXXXXXXXXXXXXX`)
+                    """
+                    )
+                with st.expander("For macOS and Linux"):
+                    st.markdown("""
+                1. **Open Terminal**: Launch the terminal application.
+                2. **Edit Profile**: Open your profile file in a text editor. Depending on your shell, this file could be `~/.bashrc`, `~/.bash_profile`, `~/.zshrc`, or another file.
+                3. **Add Environment Variables**: Add the following lines to your profile file:
+                   ```sh
+                   export OPENAI_API_KEY="sk-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+                   export ASSISTANT_ID="assist-XXXXXXXXXXXXXXXXXXXXXXXX"
+                   ```""")
+        supplier_id = get_supplier_id()
+        if st.button("Submit"):
+            with st.container(border=True):
+                if not supplier_id:
+                    st.warning("Please enter a Supplier ID")
+                else:
+                    st.subheader("What's Happening?")
+                    st.divider()
+                    thread_id = st.session_state.thread_id
+                    if thread_id not in threads or not threads[thread_id]["active"]:
+                        if df["supplier_id"].isin([supplier_id]).any():
+                            try:
+                                supplier_name = get_supplier_name(supplier_id, df)
+                                start_supplier_processing(supplier_name, thread_id)
+                            except ValueError:
+                                st.error("Invalid supplier ID")
+                            except Exception as e:
+                                st.error(f"An error occurred: {e}")
+                        else:
+                            st.error("Supplier ID not found.")
 
-    # Create a message
-    create_message(supplier_name, thread.id)
+            if st.session_state.thread_id:
+                thread_id = st.session_state.thread_id
+                if thread_id in threads:
+                    with st.spinner("Processing..."):
+                        while threads[thread_id]["active"]:
+                            time.sleep(0.1)
+                        output = threads[thread_id]["output"]
+                        process_supplier_result(thread_id, output, df)
+                        st.write(df)
 
-    # Create a run
-    run = create_run(thread.id)
 
-    # Wait for the run to complete
-    run = wait_on_run(run, thread)
-
-    # Get the response
-    response = client.beta.threads.messages.list(thread_id=thread.id)
-    return response
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    threads = {}  # Dictionary to manage threads
+    db_file = "spend_intake.db"
+    conn = connect_to_db(db_file)
+    df = pd.read_sql_query("SELECT * FROM supplier_classifications", conn)
+    conn.close()
+    main(threads, df)
