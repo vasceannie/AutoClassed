@@ -109,48 +109,90 @@ OPTIONS = {
     "enableLiveAutocompletion": True,
 }
 
+thread = {}
+
 
 class EventHandler(AssistantEventHandler):
     @override
     def on_text_created(self, text) -> None:
-        print(f"\nassistant > ", end="", flush=True)
+        if "assistant_text" not in st.session_state:
+            st.session_state.assistant_text = ""
+        st.session_state.assistant_text += text
+        st.write(st.session_state.assistant_text)
 
     @override
     def on_text_delta(self, delta, snapshot):
-        print(delta.value, end="", flush=True)
+        if "assistant_text" not in st.session_state:
+            st.session_state.assistant_text = ""
+        if delta.value:
+            st.session_state.assistant_text += delta.value
+            st.write(st.session_state.assistant_text)
+        st.empty()
 
-    @override
     def on_tool_call_created(self, tool_call):
-        print(f"\nassistant > {tool_call.type}\n", flush=True)
+        st.write(f"assistant > {tool_call.type}", flush=True)
 
     @override
-    def on_tool_call_delta(self, delta: ToolCallDelta, snapshot: ToolCall):
-        if delta.type == "get_vendor_classification":
-            if delta.get_vendor_classification is not None:
-                if delta.get_vendor_classification.inputs:
-                    print(delta.get_vendor_classification, end="", flush=True)
-                if delta.get_vendor_classification.outputs:
-                    print(f"\n\noutput >", flush=True)
-                    try:
-                        for output in delta.get_vendor_classification.outputs:
-                            if output.type == "logs":
-                                print(f"\n{output.logs}", flush=True)
-                    except TypeError as e:
-                        print(f"Error: {e}")
+    def on_tool_call_done(self, tool_call: ToolCall):
+        if tool_call.type == "function":
+            if tool_call.function:
+                if tool_call.function.name:
+                    st.markdown(f"\n{tool_call.function.name}\n")
+                if tool_call.function.arguments:
+                    st.json(tool_call.function.arguments)
+                if tool_call.function.output:
+                    st.json(tool_call.function.output)
+        elif tool_call.type == "get_vendor_classification":
+            if tool_call.vendor_classification:
+                st.write(
+                    f"get_vendor_classification: {tool_call.vendor_classification.classification_code} - {tool_call.vendor_classification.classification_name}",
+                )
             else:
-                print("Error: delta.get_vendor_classification is None")
+                st.write("get_vendor_classification: None")
 
+        # Check if this is the last message in the thread
+        messages = client.beta.threads.messages.list(thread_id=st.session_state.thread_id)
+        last_message_id = messages.data[-1].id if messages.data else None
+
+        if last_message_id == tool_call.id:
+            st.write("This is the last message in the thread.")
+        else:
+            st.write("This is not the last message in the thread.")
+
+    @override
     def submit_tool_outputs(self, tool_outputs, run_id):
-        # Use the submit_tool_outputs_stream helper
+        placeholder = st.empty()
         with client.beta.threads.runs.submit_tool_outputs_stream(
-            thread_id=self.current_run.thread_id,
-            run_id=self.current_run.id,
-            tool_outputs=tool_outputs,
-            event_handler=EventHandler(),
+                thread_id=self.current_run.thread_id,
+                run_id=self.current_run.id,
+                tool_outputs=tool_outputs,
+                event_handler=EventHandler(),
         ) as stream:
+            full_text = ""
             for text in stream.text_deltas:
-                print(text, end="", flush=True)
-            print()
+                full_text += text
+                placeholder.write(full_text)
+        placeholder.empty()
+
+    @override
+    def on_run_completed(self, run):
+        # Ensure all messages are displayed
+        st.session_state.text_boxes[-1].info(
+            "".join(st.session_state["assistant_text"][-1])
+        )
+        # Force a final update
+        st.empty()
+
+    @override
+    def on_end(self):
+        # Display any remaining text
+        if st.session_state.assistant_text[-1]:
+            st.session_state.text_boxes[-1].info(
+                "".join(st.session_state.assistant_text[-1])
+            )
+        # Create a new empty text box for future messages
+        st.session_state.text_boxes.append(st.empty())
+        st.session_state.assistant_text.append("")
 
 
 def connect_to_db(db_file_path: str) -> sqlite3.Connection:
@@ -189,7 +231,7 @@ def initialize_thread_id(supplier_name):
         f"with json please.",
     )
 
-    return message
+    return thread
 
 
 def get_supplier_id():
@@ -206,7 +248,7 @@ def start_supplier_processing(supplier_name, thread_id):
         target=process_supplier_result, args=(supplier_name, thread_id, df)
     )
     thread.start()
-    threads[thread_id]["thread"] = thread
+    # threads[thread_id]["thread"] = thread
 
 
 def process_supplier_result(thread_id, output, df):
@@ -379,9 +421,9 @@ def main(df):
                         if df["supplier_id"].isin([supplier_id]).any():
                             try:
                                 supplier_name = get_supplier_name(supplier_id, df)
-                                message = initialize_thread_id(supplier_name)
+                                thread = initialize_thread_id(supplier_name)
                                 st.write("Supplier Name:", supplier_name)
-                                st.write("Thread ID:", st.session_state.thread_id)
+                                st.write("Thread ID:", thread.id)
                                 # start_supplier_processing(supplier_name, thread_id)
                             except ValueError:
                                 st.error("Invalid supplier ID")
@@ -392,12 +434,18 @@ def main(df):
 
             with col2:
                 with client.beta.threads.runs.stream(
-                    thread_id=st.session_state.thread_id,
+                    thread_id=thread.id,
                     assistant_id=ASSISTANT_ID,
                     event_handler=EventHandler(),
                 ) as stream:
                     stream.until_done()
-    st_ace()
+                    stream.on_end()
+    st_ace(
+        language="python",
+        theme="twilight",
+        readonly=False,
+        value=inspect.getsource(main),
+    )
 
 
 if __name__ == "__main__":
