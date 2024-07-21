@@ -596,6 +596,79 @@
                 </messages>
                 <updatedAt value="2024-07-19T01:14:46.4292644" />
               </chat>
+              <chat>
+                <internalId value="e7c0c160-82e9-4e77-89a4-2902ed564995" />
+                <llm>
+                  <llm>
+                    <model value="openai/gpt-4o" />
+                    <provider value="OpenAI" />
+                    <title value="GPT-4o" />
+                  </llm>
+                </llm>
+              </chat>
+              <chat>
+                <internalId value="e5a0c1fd-7f4f-4f09-a5b1-6303fb0f4ac8" />
+                <llm>
+                  <llm>
+                    <model value="openai/gpt-4o" />
+                    <provider value="OpenAI" />
+                    <title value="GPT-4o" />
+                  </llm>
+                </llm>
+              </chat>
+              <chat>
+                <internalId value="a920d6ec-9c97-4676-bd9e-08249b3a1d58" />
+                <llm>
+                  <llm>
+                    <model value="openai/gpt-4o" />
+                    <provider value="OpenAI" />
+                    <title value="GPT-4o" />
+                  </llm>
+                </llm>
+              </chat>
+              <chat>
+                <internalId value="e19ccd6a-7023-49db-ae15-0369a8b92361" />
+                <llm>
+                  <llm>
+                    <model value="openai/gpt-4o" />
+                    <provider value="OpenAI" />
+                    <title value="GPT-4o" />
+                  </llm>
+                </llm>
+              </chat>
+              <chat>
+                <internalId value="f5df8aad-5036-4111-a225-9409dc994783" />
+                <llm>
+                  <llm>
+                    <model value="openai/gpt-4o" />
+                    <provider value="OpenAI" />
+                    <title value="GPT-4o" />
+                  </llm>
+                </llm>
+              </chat>
+              <chat>
+                <internalId value="230977a7-ffa7-4cfd-a380-bed8be2b7285" />
+                <llm>
+                  <llm>
+                    <model value="openai/gpt-4o" />
+                    <provider value="OpenAI" />
+                    <title value="GPT-4o" />
+                  </llm>
+                </llm>
+                <messages>
+                  <list>
+                    <message>
+                      <speaker value="HUMAN" />
+                      <text value="Error: Error code: 404 - {'error': {'message': &amp;quot;No thread found with id '1'.&amp;quot;, 'type': 'invalid_request_error', 'param': None, 'code': None}}" />
+                    </message>
+                    <message>
+                      <speaker value="ASSISTANT" />
+                      <text value="The error message you're encountering indicates that the system is trying to access a thread with an ID of '1', but it doesn't exist. This is a 404 error, which typically means that the requested resource could not be found.&#10;&#10;Here are a few steps to troubleshoot and resolve this issue:&#10;&#10;1. **Verify the Thread ID**: Ensure that the thread ID you're trying to access is correct and exists in the system. Double-check the ID value being passed in the request.&#10;&#10;2. **Check the Endpoint**: Make sure that the endpoint you're hitting is correct and that it supports the operation you're trying to perform. &#10;&#10;3. **API Documentation**: Refer to the API documentation to understand the correct usage and required parameters for the endpoint.&#10;&#10;4. **Error Handling**: Implement error handling in your code to manage cases where the thread ID might not exist. This can include logging the error, providing a user-friendly message, or attempting to create the thread if it doesn't exist.&#10;&#10;5. **Debugging**: Add debugging statements to log the thread ID and other relevant information before making the API call. This can help you trace the source of the issue.&#10;&#10;If you provide more context or code snippets related to the API call, I can offer more specific guidance." />
+                    </message>
+                  </list>
+                </messages>
+                <updatedAt value="2024-07-20T00:52:42.3206857" />
+              </chat>
             </list>
           </chats>
           <defaultLlm>
