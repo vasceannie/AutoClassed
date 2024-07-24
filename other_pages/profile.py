@@ -147,10 +147,10 @@ def main(df):
                                 with st.status("Preparing for blastoff..."):
                                     st.write("Targeted Supplier Name:", supplier_name)
                                     time.sleep(2)
-                                    response = openai_manager.process_supplier(
-                                        supplier_name
-                                    )
-                                    st.write("Response:", response)
+                                responses = openai_manager.process_supplier(
+                                    supplier_name
+                                )
+                                st.write(f"Processed {len(responses)} responses for {supplier_name}")
                             except ValueError:
                                 st.error("Invalid supplier ID")
                             except Exception as e:
