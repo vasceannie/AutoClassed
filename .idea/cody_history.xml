@@ -828,6 +828,229 @@
                 </messages>
                 <updatedAt value="2024-07-21T17:22:02.7000289" />
               </chat>
+              <chat>
+                <internalId value="9335de42-3965-4d93-a9fd-58a587bd76d7" />
+                <messages>
+                  <list>
+                    <message>
+                      <speaker value="HUMAN" />
+                      <text value="can you help me clean fix my code? my json object doesnt display anything&#10;&#10;class EventHandler(AssistantEventHandler):&#10;    def __init__(self):&#10;        super().__init__()&#10;        self.output_data = {&#10;            &amp;quot;validity&amp;quot;: None,&#10;            &amp;quot;classification_code&amp;quot;: &amp;quot;&amp;quot;,&#10;            &amp;quot;classification_name&amp;quot;: &amp;quot;&amp;quot;,&#10;            &amp;quot;comments&amp;quot;: None,&#10;        }&#10;        self.json_display = st.empty()&#10;        self.full_arguments = &amp;quot;&amp;quot;&#10;&#10;    def update_json_display(self):&#10;        self.json_display.json(self.output_data)&#10;&#10;    @override&#10;    def on_tool_call_created(self, tool_call: ToolCall):&#10;        if (&#10;            tool_call.type == &amp;quot;function&amp;quot;&#10;            and tool_call.function.name == &amp;quot;get_vendor_classification&amp;quot;&#10;        ):&#10;            self.update_json_display()&#10;&#10;    @override&#10;    def on_tool_call_delta(self, delta: ToolCallDelta, snapshot: ToolCallDelta):&#10;        if (&#10;            delta.type == &amp;quot;function&amp;quot;&#10;            and delta.function.name == &amp;quot;get_vendor_classification&amp;quot;&#10;        ):&#10;            if delta.function.arguments:&#10;                self.full_arguments += delta.function.arguments&#10;                try:&#10;                    args = json.loads(self.full_arguments)&#10;                    self.update_output_data(args)&#10;                    self.update_json_display()&#10;                except json.JSONDecodeError:&#10;                    pass&#10;&#10;    def update_output_data(self, args):&#10;        for key in self.output_data.keys():&#10;            if key in args:&#10;                self.output_data[key] = args[key]&#10;&#10;    @override&#10;    def submit_tool_outputs(self, tool_outputs, run_id):&#10;        with client.beta.threads.runs.submit_tool_outputs_stream(&#10;            thread_id=self.current_run.thread_id,&#10;            run_id=self.current_run.id,&#10;            tool_outputs=tool_outputs,&#10;            event_handler=self,&#10;        ) as stream:&#10;            for _ in stream.text_deltas:&#10;                pass&#10;&#10;    @override&#10;    def on_run_completed(self, run):&#10;        if self.full_arguments:&#10;            try:&#10;                args = json.loads(self.full_arguments)&#10;                self.update_output_data(args)&#10;            except json.JSONDecodeError:&#10;                pass&#10;        self.update_json_display()&#10;&#10;    @override&#10;    def on_end(self):&#10;        self.update_json_display()&#10;" />
+                    </message>
+                    <message>
+                      <speaker value="ASSISTANT" />
+                      <text value="Based on the provided code, it seems that the JSON object is not being displayed correctly. Here are a few suggestions to help fix the issue:&#10;&#10;1. Make sure that the `output_data` dictionary is being updated correctly in the `update_output_data` method. Double-check that the keys in `args` match the keys in `output_data` and that the values are being assigned properly.&#10;&#10;2. In the `on_tool_call_delta` method, you are concatenating the `delta.function.arguments` to `self.full_arguments`. However, if the arguments are not in a valid JSON format, it may cause a `JSONDecodeError` when trying to parse `self.full_arguments`. Instead of concatenating, you can directly assign `delta.function.arguments` to `self.full_arguments` like this:&#10;&#10;```python&#10;@override&#10;def on_tool_call_delta(self, delta: ToolCallDelta, snapshot: ToolCallDelta):&#10;    if (&#10;        delta.type == &quot;function&quot;&#10;        and delta.function.name == &quot;get_vendor_classification&quot;&#10;    ):&#10;        if delta.function.arguments:&#10;            self.full_arguments = delta.function.arguments&#10;            try:&#10;                args = json.loads(self.full_arguments)&#10;                self.update_output_data(args)&#10;                self.update_json_display()&#10;            except json.JSONDecodeError:&#10;                pass&#10;```&#10;&#10;3. In the `on_run_completed` method, you are parsing `self.full_arguments` as JSON and updating the `output_data` dictionary. However, if `self.full_arguments` is not a valid JSON string, it will raise a `JSONDecodeError`. You can handle this by catching the exception and logging an error or displaying an appropriate message to the user.&#10;&#10;```python&#10;@override&#10;def on_run_completed(self, run):&#10;    if self.full_arguments:&#10;        try:&#10;            args = json.loads(self.full_arguments)&#10;            self.update_output_data(args)&#10;        except json.JSONDecodeError:&#10;            print(&quot;Error: Invalid JSON arguments&quot;)&#10;            # Or display an error message using Streamlit&#10;            st.error(&quot;Invalid JSON arguments&quot;)&#10;    self.update_json_display()&#10;```&#10;&#10;4. Make sure that the `st.empty()` container assigned to `self.json_display` is being used correctly. Ensure that the container is visible in the Streamlit app and that no other elements are overwriting or hiding it.&#10;&#10;5. If the issue persists, you can try adding debug statements or logging to track the values of `self.output_data` and `self.full_arguments` at different points in the code to identify where the problem might be occurring.&#10;&#10;By applying these suggestions and debugging the code further, you should be able to resolve the issue and display the JSON object correctly." />
+                    </message>
+                    <message>
+                      <speaker value="HUMAN" />
+                      <text value="why am I still getting &amp;quot;this is not the last message?&amp;quot;" />
+                    </message>
+                    <message>
+                      <speaker value="ASSISTANT" />
+                      <text value="Based on the provided code in the `EventHandler` class, specifically in the `on_tool_call_done` method, there is a check to determine if the current tool call is the last message in the thread. Here's the relevant code snippet:&#10;&#10;```python&#10;@override&#10;def on_tool_call_done(self, tool_call: ToolCall):&#10;    # ...&#10;&#10;    # Check if this is the last message in the thread&#10;    messages = client.beta.threads.messages.list(thread_id=st.session_state.thread_id)&#10;    last_message_id = messages.data[-1].id if messages.data else None&#10;&#10;    if last_message_id == tool_call.id:&#10;        st.write(&quot;This is the last message in the thread.&quot;, unsafe_allow_html=True)&#10;    else:&#10;        st.write(&quot;This is not the last message in the thread.&quot;, unsafe_allow_html=True)&#10;```&#10;&#10;The reason you are still getting &quot;This is not the last message&quot; is likely because the condition `last_message_id == tool_call.id` is not being met. This could happen due to the following reasons:&#10;&#10;1. The `messages` list retrieved from `client.beta.threads.messages.list` may not be up to date or may not include the latest messages in the thread. There might be a delay in retrieving the most recent messages.&#10;&#10;2. The `tool_call.id` may not match the `last_message_id` because there could be additional messages or events in the thread after the current tool call.&#10;&#10;To resolve this issue, you can try the following:&#10;&#10;1. Double-check that the `thread_id` used in `client.beta.threads.messages.list` is correct and corresponds to the current thread.&#10;&#10;2. Add a short delay or retry mechanism to allow time for the messages to be updated before checking for the last message. You can use `time.sleep()` to introduce a small delay before retrieving the messages.&#10;&#10;3. Instead of relying on the `last_message_id`, you can compare the `tool_call.id` with the IDs of the messages in the `messages` list to determine if it is the last message. Iterate through the messages in reverse order and check if `tool_call.id` matches any of the message IDs.&#10;&#10;4. If the issue persists, you may need to investigate further by logging or printing the values of `last_message_id` and `tool_call.id` to see if they match as expected.&#10;&#10;Keep in mind that the behavior of the Anthropic API and the order of messages and events in a thread may vary depending on the specific implementation and any potential race conditions or delays in the system." />
+                    </message>
+                    <message>
+                      <speaker value="HUMAN" />
+                      <text value="can we restructure it to go by tool call id?" />
+                    </message>
+                    <message>
+                      <speaker value="ASSISTANT" />
+                      <text value="Yes, we can restructure the code to go by tool call ID instead of relying on the last message ID. Here's an updated version of the `on_tool_call_done` method that compares the tool call ID with the IDs of the messages in the thread:&#10;&#10;```python&#10;@override&#10;def on_tool_call_done(self, tool_call: ToolCall):&#10;    if tool_call.type == &quot;function&quot;:&#10;        if tool_call.function:&#10;            if tool_call.function.name:&#10;                st.markdown(f&quot;\n{tool_call.function.name}\n&quot;)&#10;            if tool_call.function.arguments:&#10;                st.json(tool_call.function.arguments)&#10;            if tool_call.function.output:&#10;                st.json(tool_call.function.output)&#10;    elif tool_call.type == &quot;get_vendor_classification&quot;:&#10;        if tool_call.vendor_classification:&#10;            st.write(&#10;                f&quot;get_vendor_classification: {tool_call.vendor_classification.classification_code} - {tool_call.vendor_classification.classification_name}&quot;,&#10;            )&#10;        else:&#10;            st.write(&quot;get_vendor_classification: None&quot;)&#10;&#10;    # Check if this is the last message in the thread&#10;    messages = client.beta.threads.messages.list(thread_id=st.session_state.thread_id)&#10;    is_last_message = False&#10;    for message in reversed(messages.data):&#10;        if message.id == tool_call.id:&#10;            is_last_message = True&#10;            break&#10;&#10;    if is_last_message:&#10;        st.write(&quot;This is the last message in the thread.&quot;, unsafe_allow_html=True)&#10;    else:&#10;        st.write(&quot;This is not the last message in the thread.&quot;, unsafe_allow_html=True)&#10;```&#10;&#10;In this updated code:&#10;&#10;1. We retrieve the list of messages in the thread using `client.beta.threads.messages.list`.&#10;&#10;2. We initialize a variable `is_last_message` to `False`.&#10;&#10;3. We iterate through the messages in reverse order using `reversed(messages.data)`. This allows us to start from the most recent message and work backwards.&#10;&#10;4. For each message, we compare its ID (`message.id`) with the tool call ID (`tool_call.id`). If they match, we set `is_last_message` to `True` and break out of the loop.&#10;&#10;5. After the loop, we check the value of `is_last_message`. If it is `True`, we display &quot;This is the last message in the thread.&quot; Otherwise, we display &quot;This is not the last message in the thread.&quot;&#10;&#10;By iterating through the messages in reverse order and comparing the tool call ID with each message ID, we can determine if the tool call is the last message in the thread.&#10;&#10;Note: Make sure to handle any potential exceptions or edge cases that may occur when retrieving the messages or comparing the IDs." />
+                    </message>
+                    <message>
+                      <speaker value="HUMAN" />
+                      <text value="where should I insert this function?" />
+                    </message>
+                    <message>
+                      <speaker value="ASSISTANT" />
+                      <text value="Based on the provided codebase context, the `EventHandler` class is defined in the `other_pages\profile.py` file. The `on_tool_call_done` method is already present in this class.&#10;&#10;To update the `on_tool_call_done` method with the new code that checks the tool call ID against the message IDs, you should replace the existing `on_tool_call_done` method in the `EventHandler` class with the updated version.&#10;&#10;Here's where you should make the change in the `other_pages\profile.py` file:&#10;&#10;```python&#10;class EventHandler(AssistantEventHandler):&#10;    # ...&#10;&#10;    @override&#10;    def on_tool_call_done(self, tool_call: ToolCall):&#10;        if tool_call.type == &quot;function&quot;:&#10;            if tool_call.function:&#10;                if tool_call.function.name:&#10;                    st.markdown(f&quot;\n{tool_call.function.name}\n&quot;)&#10;                if tool_call.function.arguments:&#10;                    st.json(tool_call.function.arguments)&#10;                if tool_call.function.output:&#10;                    st.json(tool_call.function.output)&#10;        elif tool_call.type == &quot;get_vendor_classification&quot;:&#10;            if tool_call.vendor_classification:&#10;                st.write(&#10;                    f&quot;get_vendor_classification: {tool_call.vendor_classification.classification_code} - {tool_call.vendor_classification.classification_name}&quot;,&#10;                )&#10;            else:&#10;                st.write(&quot;get_vendor_classification: None&quot;)&#10;&#10;        # Check if this is the last message in the thread&#10;        messages = client.beta.threads.messages.list(thread_id=st.session_state.thread_id)&#10;        is_last_message = False&#10;        for message in reversed(messages.data):&#10;            if message.id == tool_call.id:&#10;                is_last_message = True&#10;                break&#10;&#10;        if is_last_message:&#10;            st.write(&quot;This is the last message in the thread.&quot;, unsafe_allow_html=True)&#10;        else:&#10;            st.write(&quot;This is not the last message in the thread.&quot;, unsafe_allow_html=True)&#10;&#10;    # ...&#10;```&#10;&#10;Replace the existing `on_tool_call_done` method with the updated version that includes the code to check the tool call ID against the message IDs.&#10;&#10;After making this change, the `EventHandler` class will use the new logic to determine if the tool call is the last message in the thread based on the tool call ID." />
+                    </message>
+                    <message>
+                      <speaker value="HUMAN" />
+                      <text value="im talking about this&#10;&#10;def update_df(df, supplier_id, classification_code, classification_name):&#10;    df.loc[df[&amp;quot;supplier_id&amp;quot;] == supplier_id, &amp;quot;classification_code&amp;quot;] = (&#10;        classification_code&#10;    )&#10;    df.loc[df[&amp;quot;supplier_id&amp;quot;] == supplier_id, &amp;quot;classification_name&amp;quot;] = (&#10;        classification_name&#10;    )&#10;    conn = connect_to_db(db_file)&#10;    df.to_sql(&amp;quot;supplier_classifications&amp;quot;, conn, if_exists=&amp;quot;replace&amp;quot;, index=False)&#10;    conn.close()" />
+                    </message>
+                    <message>
+                      <speaker value="ASSISTANT" />
+                      <text value="Apologies for the confusion. The `update_df` function you provided is not directly related to the `EventHandler` class or the `on_tool_call_done` method. It appears to be a separate function that updates a DataFrame and saves it to a database.&#10;&#10;Based on the codebase context, the `update_df` function is defined in the `other_pages\profile.py` file, outside of the `EventHandler` class.&#10;&#10;If you want to use the `update_df` function within the `EventHandler` class or any other part of your code, you can simply call it with the appropriate arguments wherever you need to update the DataFrame and save it to the database.&#10;&#10;For example, if you want to call `update_df` after updating the `output_data` in the `on_run_completed` method of the `EventHandler` class, you can do something like this:&#10;&#10;```python&#10;@override&#10;def on_run_completed(self, run):&#10;    if self.full_arguments:&#10;        try:&#10;            args = json.loads(self.full_arguments)&#10;            self.update_output_data(args)&#10;            &#10;            # Call update_df with the appropriate arguments&#10;            update_df(df, args['supplier_id'], args['classification_code'], args['classification_name'])&#10;            &#10;        except json.JSONDecodeError:&#10;            pass&#10;    self.update_json_display()&#10;```&#10;&#10;In this example, after updating the `output_data` with the parsed arguments, the `update_df` function is called with the necessary arguments (`df`, `supplier_id`, `classification_code`, and `classification_name`) to update the DataFrame and save it to the database.&#10;&#10;Make sure to replace `df` with the actual DataFrame object you want to update, and ensure that the `args` dictionary contains the required keys (`'supplier_id'`, `'classification_code'`, and `'classification_name'`) with the appropriate values.&#10;&#10;Also, ensure that the `db_file` variable used in the `connect_to_db` function is properly defined and accessible within the scope of the `update_df` function.&#10;&#10;You can place the `update_df` function call wherever it makes sense in your code flow, depending on when you want to update the DataFrame and save it to the database." />
+                    </message>
+                    <message>
+                      <speaker value="HUMAN" />
+                      <text value="I need better safeguards for making sure my response shows up. " />
+                    </message>
+                    <message>
+                      <speaker value="ASSISTANT" />
+                      <text value="To ensure that your response shows up consistently, you can implement additional safeguards and error handling in your code. Here are a few suggestions:&#10;&#10;1. Use a more reliable way to determine if the tool call is the last message in the thread. Instead of relying on the message IDs, you can use the `parent_message_id` attribute of the tool call. If the `parent_message_id` is `None` or an empty string, it indicates that the tool call is the last message in the thread.&#10;&#10;   Update the `on_tool_call_done` method in the `EventHandler` class:&#10;&#10;   ```python&#10;   @override&#10;   def on_tool_call_done(self, tool_call: ToolCall):&#10;       # ...&#10;&#10;       # Check if this is the last message in the thread&#10;       if tool_call.parent_message_id is None or tool_call.parent_message_id == &quot;&quot;:&#10;           st.write(&quot;This is the last message in the thread.&quot;, unsafe_allow_html=True)&#10;       else:&#10;           st.write(&quot;This is not the last message in the thread.&quot;, unsafe_allow_html=True)&#10;   ```&#10;&#10;2. Implement error handling and logging to capture and diagnose any issues that may occur during the execution of your code. Use `try-except` blocks to catch exceptions and log the errors using a logging library or by printing to the console.&#10;&#10;   Example:&#10;&#10;   ```python&#10;   try:&#10;       # Your code here&#10;   except Exception as e:&#10;       st.error(f&quot;An error occurred: {str(e)}&quot;)&#10;       logging.error(f&quot;An error occurred: {str(e)}&quot;)&#10;   ```&#10;&#10;3. Use Streamlit's `st.success()` or `st.info()` functions to display success or informational messages when your response is successfully generated and displayed. This provides visual feedback to the user.&#10;&#10;   Example:&#10;&#10;   ```python&#10;   st.success(&quot;Response generated and displayed successfully.&quot;)&#10;   ```&#10;&#10;4. Implement a retry mechanism with a timeout to handle temporary network issues or delays in the Anthropic API. If the initial attempt to retrieve messages or process the tool call fails, you can retry the operation a few times with a short delay between each attempt.&#10;&#10;   Example:&#10;&#10;   ```python&#10;   import time&#10;&#10;   max_retries = 3&#10;   retry_delay = 1  # seconds&#10;&#10;   for attempt in range(max_retries):&#10;       try:&#10;           # Your code here&#10;           break  # If successful, break out of the retry loop&#10;       except Exception as e:&#10;           if attempt &lt; max_retries - 1:&#10;               time.sleep(retry_delay)&#10;           else:&#10;               st.error(f&quot;Failed after {max_retries} attempts. Error: {str(e)}&quot;)&#10;               logging.error(f&quot;Failed after {max_retries} attempts. Error: {str(e)}&quot;)&#10;   ```&#10;&#10;5. Regularly test your code with different scenarios and edge cases to ensure that your response is generated and displayed as expected. This helps identify any potential issues or gaps in your error handling.&#10;&#10;By implementing these safeguards and error handling techniques, you can improve the reliability and robustness of your code, ensuring that your response is consistently generated and displayed to the user." />
+                    </message>
+                    <message>
+                      <speaker value="HUMAN" />
+                      <text value="can you rewrite that in code" />
+                    </message>
+                    <message>
+                      <speaker value="ASSISTANT" />
+                      <text value="Certainly! Here's an updated version of the `EventHandler` class with the suggested safeguards and error handling:&#10;&#10;```python&#10;import streamlit as st&#10;import logging&#10;import time&#10;&#10;class EventHandler(AssistantEventHandler):&#10;    # ...&#10;&#10;    @override&#10;    def on_tool_call_done(self, tool_call: ToolCall):&#10;        try:&#10;            if tool_call.type == &quot;function&quot;:&#10;                if tool_call.function:&#10;                    if tool_call.function.name:&#10;                        st.markdown(f&quot;\n{tool_call.function.name}\n&quot;)&#10;                    if tool_call.function.arguments:&#10;                        st.json(tool_call.function.arguments)&#10;                    if tool_call.function.output:&#10;                        st.json(tool_call.function.output)&#10;            elif tool_call.type == &quot;get_vendor_classification&quot;:&#10;                if tool_call.vendor_classification:&#10;                    st.write(&#10;                        f&quot;get_vendor_classification: {tool_call.vendor_classification.classification_code} - {tool_call.vendor_classification.classification_name}&quot;,&#10;                    )&#10;                else:&#10;                    st.write(&quot;get_vendor_classification: None&quot;)&#10;&#10;            # Check if this is the last message in the thread&#10;            if tool_call.parent_message_id is None or tool_call.parent_message_id == &quot;&quot;:&#10;                st.write(&quot;This is the last message in the thread.&quot;, unsafe_allow_html=True)&#10;            else:&#10;                st.write(&quot;This is not the last message in the thread.&quot;, unsafe_allow_html=True)&#10;&#10;            st.success(&quot;Response generated and displayed successfully.&quot;)&#10;        except Exception as e:&#10;            st.error(f&quot;An error occurred: {str(e)}&quot;)&#10;            logging.error(f&quot;An error occurred: {str(e)}&quot;)&#10;&#10;    @override&#10;    def submit_tool_outputs(self, tool_outputs, run_id):&#10;        max_retries = 3&#10;        retry_delay = 1  # seconds&#10;&#10;        for attempt in range(max_retries):&#10;            try:&#10;                with client.beta.threads.runs.submit_tool_outputs_stream(&#10;                    thread_id=self.current_run.thread_id,&#10;                    run_id=self.current_run.id,&#10;                    tool_outputs=tool_outputs,&#10;                    event_handler=self,&#10;                ) as stream:&#10;                    for _ in stream.text_deltas:&#10;                        pass&#10;                break  # If successful, break out of the retry loop&#10;            except Exception as e:&#10;                if attempt &lt; max_retries - 1:&#10;                    time.sleep(retry_delay)&#10;                else:&#10;                    st.error(f&quot;Failed to submit tool outputs after {max_retries} attempts. Error: {str(e)}&quot;)&#10;                    logging.error(f&quot;Failed to submit tool outputs after {max_retries} attempts. Error: {str(e)}&quot;)&#10;&#10;    # ...&#10;```&#10;&#10;In this updated code:&#10;&#10;1. The `on_tool_call_done` method now checks if the `parent_message_id` of the tool call is `None` or an empty string to determine if it is the last message in the thread.&#10;&#10;2. Error handling is added using `try-except` blocks to catch exceptions and display error messages using `st.error()` and `logging.error()`.&#10;&#10;3. `st.success()` is used to display a success message when the response is generated and displayed successfully.&#10;&#10;4. The `submit_tool_outputs` method now includes a retry mechanism with a maximum of 3 attempts and a delay of 1 second between each attempt. If the submission of tool outputs fails after the maximum number of attempts, an error message is displayed using `st.error()` and logged using `logging.error()`.&#10;&#10;Make sure to import the necessary modules (`streamlit`, `logging`, and `time`) at the top of your file.&#10;&#10;These changes should help improve the reliability and error handling of your code, ensuring that your response is consistently generated and displayed to the user." />
+                    </message>
+                    <message>
+                      <speaker value="HUMAN" />
+                      <text value="An error occurred: 'FunctionToolCall' object has no attribute 'parent_message_id'" />
+                    </message>
+                    <message>
+                      <speaker value="ASSISTANT" />
+                      <text value="I apologize for the confusion in my previous response. Based on the error message you provided, it seems that the `FunctionToolCall` object does not have a `parent_message_id` attribute.&#10;&#10;In the Anthropic API, the `parent_message_id` attribute is typically associated with messages rather than tool calls. To determine if a tool call is the last message in the thread, we can use a different approach.&#10;&#10;Here's an updated version of the `on_tool_call_done` method that checks if the tool call is the last message in the thread based on the available information:&#10;&#10;```python&#10;@override&#10;def on_tool_call_done(self, tool_call: ToolCall):&#10;    try:&#10;        if tool_call.type == &quot;function&quot;:&#10;            if tool_call.function:&#10;                if tool_call.function.name:&#10;                    st.markdown(f&quot;\n{tool_call.function.name}\n&quot;)&#10;                if tool_call.function.arguments:&#10;                    st.json(tool_call.function.arguments)&#10;                if tool_call.function.output:&#10;                    st.json(tool_call.function.output)&#10;        elif tool_call.type == &quot;get_vendor_classification&quot;:&#10;            if tool_call.vendor_classification:&#10;                st.write(&#10;                    f&quot;get_vendor_classification: {tool_call.vendor_classification.classification_code} - {tool_call.vendor_classification.classification_name}&quot;,&#10;                )&#10;            else:&#10;                st.write(&quot;get_vendor_classification: None&quot;)&#10;&#10;        # Check if this is the last message in the thread&#10;        messages = client.beta.threads.messages.list(thread_id=st.session_state.thread_id)&#10;        last_message_id = messages.data[-1].id if messages.data else None&#10;&#10;        if last_message_id == tool_call.id:&#10;            st.write(&quot;This is the last message in the thread.&quot;, unsafe_allow_html=True)&#10;        else:&#10;            st.write(&quot;This is not the last message in the thread.&quot;, unsafe_allow_html=True)&#10;&#10;        st.success(&quot;Response generated and displayed successfully.&quot;)&#10;    except Exception as e:&#10;        st.error(f&quot;An error occurred: {str(e)}&quot;)&#10;        logging.error(f&quot;An error occurred: {str(e)}&quot;)&#10;```&#10;&#10;In this updated code:&#10;&#10;1. Instead of using the `parent_message_id` attribute, we retrieve the list of messages in the thread using `client.beta.threads.messages.list()`.&#10;&#10;2. We get the ID of the last message in the thread by accessing `messages.data[-1].id` if `messages.data` is not empty. If `messages.data` is empty, we set `last_message_id` to `None`.&#10;&#10;3. We compare the `last_message_id` with the `tool_call.id`. If they match, it means the tool call is the last message in the thread, and we display &quot;This is the last message in the thread.&quot; Otherwise, we display &quot;This is not the last message in the thread.&quot;&#10;&#10;4. The error handling and success message display remain the same as in the previous code.&#10;&#10;This approach should resolve the error you encountered and provide a way to determine if the tool call is the last message in the thread based on the available information." />
+                    </message>
+                  </list>
+                </messages>
+                <updatedAt value="2024-07-21T21:53:34.0472342" />
+              </chat>
+              <chat>
+                <internalId value="50099c20-8a3d-485b-bfd3-dc6c09f7c022" />
+                <llm>
+                  <llm>
+                    <model value="anthropic/claude-3-5-sonnet-20240620" />
+                    <provider value="Anthropic" />
+                    <title value="Claude 3.5 Sonnet" />
+                  </llm>
+                </llm>
+                <messages>
+                  <list>
+                    <message>
+                      <speaker value="HUMAN" />
+                      <text value="can you help troubleshoot why my responses are empty?&#10;&#10;get_vendor_classification&#10;&#10;{&#10;&amp;quot;validity&amp;quot;:false&#10;&amp;quot;classification_code&amp;quot;:&amp;quot;&amp;quot;&#10;&amp;quot;classification_name&amp;quot;:&amp;quot;&amp;quot;&#10;&amp;quot;comments&amp;quot;:false&#10;}&#10;This is not the last message in the thread.&#10;&#10;Response generated and displayed successfully.&#10;&#10;[&#10;0:&amp;quot;&amp;quot;&#10;]&#10;[&#10;0:&amp;quot;&amp;quot;&#10;]" />
+                    </message>
+                    <message>
+                      <speaker value="ASSISTANT" />
+                      <text value="Certainly! I'd be happy to help troubleshoot why your responses are empty. Based on the information provided, it appears that the `get_vendor_classification` function is not returning the expected data. Here are a few potential reasons and steps to investigate:&#10;&#10;1. Check the input parameters: Ensure that the function is receiving the correct input data.&#10;&#10;2. Verify the data source: Make sure the database or API you're querying has the expected data for the given input.&#10;&#10;3. Examine the function logic: Review the `get_vendor_classification` function to ensure it's correctly processing the data and setting the classification code and name.&#10;&#10;4. Error handling: Look for any error handling mechanisms that might be suppressing errors and returning empty values instead.&#10;&#10;5. Logging: Add logging statements throughout the function to track the data flow and identify where the values are being lost or not set.&#10;&#10;6. Test with known data: Try running the function with a known set of input data to see if it produces the expected results.&#10;&#10;7. Check for any recent changes: If this worked before, review any recent code changes that might have affected this functionality.&#10;&#10;8. Validate the response parsing: Ensure that the code handling the response from `get_vendor_classification` is correctly parsing and displaying the results.&#10;&#10;By systematically going through these steps, you should be able to identify the root cause of the empty responses and resolve the issue." />
+                    </message>
+                    <message>
+                      <speaker value="HUMAN" />
+                      <text value="can you try harder" />
+                    </message>
+                    <message>
+                      <speaker value="ASSISTANT" />
+                      <text value="Absolutely! I'll dive deeper into the codebase to find a more specific solution for you. Let me analyze the available code and provide a more targeted approach to resolve the empty responses issue.&#10;&#10;After reviewing the codebase, I've noticed a few key points that could be causing the empty responses:&#10;&#10;1. In the `get_vendor_classification` function, there's a check for the validity of the classification. If it's not valid, it returns empty strings for the classification code and name.&#10;&#10;2. The `comments` field in the response is set to `false`, which might indicate that there's no additional information available.&#10;&#10;3. The response is being generated and displayed successfully, but the content is empty.&#10;&#10;To address this, try the following:&#10;&#10;1. Check the input parameters being passed to `get_vendor_classification`. Ensure they're correct and match the expected format.&#10;&#10;2. Examine the logic that determines the validity of the classification. There might be a condition that's always evaluating to false.&#10;&#10;3. Add debug logging within the `get_vendor_classification` function to track the flow and see where the data is being lost or set to empty strings.&#10;&#10;4. Verify the data source (database or API) to ensure it contains the expected classification data.&#10;&#10;5. If possible, temporarily modify the function to return hardcoded test data to confirm if the issue is within the function or in the data retrieval process.&#10;&#10;By implementing these steps, we should be able to pinpoint the exact cause of the empty responses and provide a more effective solution. Let me know if you need any further assistance or if you'd like me to explain any part of the code in more detail." />
+                    </message>
+                  </list>
+                </messages>
+                <updatedAt value="2024-07-21T21:55:47.2628363" />
+              </chat>
+              <chat>
+                <internalId value="91206af5-e450-4521-8e80-b1be67bbd02d" />
+                <llm>
+                  <llm>
+                    <model value="anthropic/claude-3-5-sonnet-20240620" />
+                    <provider value="Anthropic" />
+                    <title value="Claude 3.5 Sonnet" />
+                  </llm>
+                </llm>
+              </chat>
+              <chat>
+                <internalId value="b92c6b6d-38ce-49f0-843a-048eaced1208" />
+                <llm>
+                  <llm>
+                    <model value="anthropic/claude-3-5-sonnet-20240620" />
+                    <provider value="Anthropic" />
+                    <title value="Claude 3.5 Sonnet" />
+                  </llm>
+                </llm>
+              </chat>
+              <chat>
+                <internalId value="4c5dab8f-54a6-4eb5-ab2f-22cbaa5ebab5" />
+                <llm>
+                  <llm>
+                    <model value="anthropic/claude-3-5-sonnet-20240620" />
+                    <provider value="Anthropic" />
+                    <title value="Claude 3.5 Sonnet" />
+                  </llm>
+                </llm>
+              </chat>
+              <chat>
+                <internalId value="6c2a7c6b-d51f-460a-9104-ab61a4fa7a67" />
+                <llm>
+                  <llm>
+                    <model value="anthropic/claude-3-5-sonnet-20240620" />
+                    <provider value="Anthropic" />
+                    <title value="Claude 3.5 Sonnet" />
+                  </llm>
+                </llm>
+              </chat>
+              <chat>
+                <internalId value="06862dc4-9afb-401e-84a3-36baa9a8297b" />
+                <llm>
+                  <llm>
+                    <model value="anthropic/claude-3-5-sonnet-20240620" />
+                    <provider value="Anthropic" />
+                    <title value="Claude 3.5 Sonnet" />
+                  </llm>
+                </llm>
+              </chat>
+              <chat>
+                <internalId value="d230ffb1-3ff5-4863-88bd-d94c44ec9937" />
+                <llm>
+                  <llm>
+                    <model value="anthropic/claude-3-5-sonnet-20240620" />
+                    <provider value="Anthropic" />
+                    <title value="Claude 3.5 Sonnet" />
+                  </llm>
+                </llm>
+              </chat>
+              <chat>
+                <internalId value="5b7757ad-f72f-4957-9aca-701df36cb1ef" />
+                <llm>
+                  <llm>
+                    <model value="anthropic/claude-3-5-sonnet-20240620" />
+                    <provider value="Anthropic" />
+                    <title value="Claude 3.5 Sonnet" />
+                  </llm>
+                </llm>
+              </chat>
+              <chat>
+                <internalId value="39a1b4ae-36ca-4e29-ba20-2922846d8484" />
+                <llm>
+                  <llm>
+                    <model value="anthropic/claude-3-5-sonnet-20240620" />
+                    <provider value="Anthropic" />
+                    <title value="Claude 3.5 Sonnet" />
+                  </llm>
+                </llm>
+              </chat>
+              <chat>
+                <internalId value="83538958-7b7a-49f7-b7d1-6ccecc27655a" />
+                <llm>
+                  <llm>
+                    <model value="anthropic/claude-3-5-sonnet-20240620" />
+                    <provider value="Anthropic" />
+                    <title value="Claude 3.5 Sonnet" />
+                  </llm>
+                </llm>
+              </chat>
+              <chat>
+                <internalId value="4bb28bca-516d-43a5-bcd4-a73f362e5416" />
+                <llm>
+                  <llm>
+                    <model value="anthropic/claude-3-5-sonnet-20240620" />
+                    <provider value="Anthropic" />
+                    <title value="Claude 3.5 Sonnet" />
+                  </llm>
+                </llm>
+              </chat>
+              <chat>
+                <internalId value="a2314c63-4082-4a1c-9272-2c4b5d10124f" />
+                <llm>
+                  <llm>
+                    <model value="anthropic/claude-3-5-sonnet-20240620" />
+                    <provider value="Anthropic" />
+                    <title value="Claude 3.5 Sonnet" />
+                  </llm>
+                </llm>
+              </chat>
+              <chat>
+                <internalId value="e433690f-e0f3-4c2d-9a42-12d810c52a7a" />
+                <llm>
+                  <llm>
+                    <model value="anthropic/claude-3-5-sonnet-20240620" />
+                    <provider value="Anthropic" />
+                    <title value="Claude 3.5 Sonnet" />
+                  </llm>
+                </llm>
+              </chat>
             </list>
           </chats>
           <defaultLlm>

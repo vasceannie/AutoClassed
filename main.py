@@ -2,7 +2,6 @@ import streamlit as st
 from pandas import DataFrame
 from pygwalker.api.streamlit import StreamlitRenderer
 import pandas as pd
-from st_pages import show_pages_from_config
 import sqlite3
 import logging
 
@@ -97,7 +96,6 @@ def main():
     """
     print("Starting main function")
     st.title("Data Explorer", anchor=None, help=None)
-    show_pages_from_config()
 
     db_file_path = "spend_intake.db"
     db_name = "spend_data_raw"

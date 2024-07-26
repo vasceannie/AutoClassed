@@ -234,7 +234,7 @@ class OpenAIManager:
         return self.client.beta.threads.messages.create(
             thread_id=thread_id,
             role="user",
-            content=f"Please provide validity, classification, and comments for the supplier: {supplier_name}. Respond with json please.",
+            content=f"Please investigate: {supplier_name}. Please respond with JSON"
         )
 
     def stream_response(self, thread_id):
@@ -268,29 +268,49 @@ class EventHandler(AssistantEventHandler):
     def on_event(self, event):
         # Retrieve events that are denoted with 'requires_action'
         # since these will have our tool_calls
+        # print(f"Event received: {event.event}")
         if event.event == "thread.run.requires_action":
+            # print(f"Event data: {event.data}")
             run_id = event.data.id  # Retrieve the run ID from the event data
+            # print(f"Run ID: {run_id}")
             self.handle_requires_action(event.data, run_id)
 
     def handle_requires_action(self, data, run_id):
         tool_outputs = []
-
         for tool in data.required_action.submit_tool_outputs.tool_calls:
             if tool.function.name == "get_vendor_classification":
-                tool_outputs.append(json.loads(tool.function.arguments[0]))
+                try:
+                    arguments_str = str(tool.function.arguments)
+                    tool_output = st.json(json.loads(arguments_str))
+                except json.JSONDecodeError as e:
+                    print(f"JSONDecodeError: {e}")
+                    continue
 
+                tool_output["tool_call_id"] = tool.id
+                # filtered_tool_output = {k: v for k, v in tool_output.items() if k in ["tool_call_id", "output"]}
+                # if "output" not in filtered_tool_output:
+                #     filtered_tool_output["output"] = ""  # or some default value
+                # print(f"Filtered tool output: {filtered_tool_output}")
+                # # tool_outputs.append(filtered_tool_output)
+
+        # print(f"Tool outputs: {tool_outputs}")
         self.submit_tool_outputs(tool_outputs, run_id)
 
     def submit_tool_outputs(self, tool_outputs, run_id):
+        print(f"Tool outputs: {tool_outputs}")
+        print(f"Run ID: {run_id}")
+        print(f"Current run thread ID: {self.current_run.thread_id}")
+        print(f"Current run ID: {self.current_run.id}")
         # Use the submit_tool_outputs_stream helper
         with client.beta.threads.runs.submit_tool_outputs_stream(
-            thread_id=self.current_run.thread_id,
-            run_id=self.current_run.id,
-            tool_outputs=tool_outputs,
-            event_handler=EventHandler(),
+                thread_id=self.current_run.thread_id,
+                run_id=self.current_run.id,
+                tool_outputs=tool_outputs,
+                event_handler=EventHandler(),
         ) as stream:
-            for text in stream.text_deltas:
-                st.json(json.loads(text))
+            print(f"Stream started")
+            stream.until_done()
+            print(f"Stream ended")
 
     def on_text_created(self, text):
         try:
@@ -311,26 +331,19 @@ class EventHandler(AssistantEventHandler):
         self.update_container()
 
     def on_tool_call_created(self, tool_call):
-        self.responses.append(
-            {
-                "tool_call_created": tool_call.id,
-            }
-        )
         self.update_container()
 
     def on_tool_call_done(self, tool_call):
-        response = {"tool_call_completed": tool_call.type}
-        if tool_call.type == "function" and tool_call.function:
-            response["arguments"] = json.loads(tool_call.function.arguments)
-            response["output"] = json.loads(tool_call.function.output)
-        self.responses.append(response)
+        # response = {"tool_call_completed": tool_call.type}
+        # if tool_call.type == "function" and tool_call.function:
+        #     response["arguments"] = json.loads(tool_call.function.arguments)
+        #     response["output"] = json.loads(tool_call.function.output)
+        # self.responses.append(response)
         self.update_container()
 
     def on_run_completed(self, run):
-        self.responses.append({"status": "Run completed"})
         self.update_container()
 
     def on_end(self):
-        self.responses.append({"status": "Stream ended"})
         self.update_container()
         return self.responses
