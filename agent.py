@@ -11,8 +11,20 @@ from langchain_openai import ChatOpenAI
 import concurrent.futures
 
 
-# Your GetSupplierData class (unchanged)
+# Your GetSupplierData class
 class GetSupplierData(BaseModel):
+    """
+    A class to represent the data of a supplier.
+
+    Attributes:
+        supplier_name (str): The name of the supplier organization.
+        validation (bool): Whether the supplier is a valid supplier.
+        classification_code (str): The UNSPSC classification code of the supplier.
+        classification_name (str): The UNSPSC classification name of the supplier.
+        website (str): The website of the supplier.
+        comments (str): Any additional comments about the supplier.
+    """
+
     supplier_name: str = Field(description="The name of the supplier organization")
     validation: bool = Field(description="Whether the supplier is a valid supplier")
     classification_code: str = Field(
@@ -61,6 +73,16 @@ prompt = ChatPromptTemplate.from_messages(
 
 # Define the function to process the company name
 def process_company_name(company_name: str) -> GetSupplierData:
+    """
+    Process the company name and return the supplier data.
+
+    Args:
+        company_name (str): The name of the company.
+
+    Returns:
+        GetSupplierData: The supplier data.
+    """
+
     tools = [
         StructuredTool.from_function(
             name="investigate_supplier_company",
@@ -84,6 +106,16 @@ def process_company_name(company_name: str) -> GetSupplierData:
 
 # Function to get suppliers without classification_code
 def get_suppliers_without_classification(cursor, limit: int = 100) -> List[tuple]:
+    """
+    Retrieve suppliers from the database who do not have a classification code.
+
+    Args:
+        cursor: The database cursor.
+        limit (int): The number of suppliers to retrieve. Default is 100.
+
+    Returns:
+        List[tuple]: A list of tuples containing supplier IDs and names.
+    """
     cursor.execute(
         """
         SELECT id, supplier_name 
@@ -98,6 +130,14 @@ def get_suppliers_without_classification(cursor, limit: int = 100) -> List[tuple
 
 # Function to update supplier information in the database
 def update_supplier_info(conn, supplier_id, supplier_data):
+    """
+    Update supplier information in the database.
+
+    Args:
+        conn: The database connection.
+        supplier_id: The ID of the supplier to update.
+        supplier_data: An instance of GetSupplierData containing the updated data.
+    """
     cursor = conn.cursor()
     cursor.execute(
         """
@@ -120,6 +160,17 @@ def update_supplier_info(conn, supplier_id, supplier_data):
 
 # Function to process a single supplier
 def process_single_supplier(supplier_id, supplier_name, conn):
+    """
+    Process a single supplier by retrieving and updating its information.
+
+    Args:
+        supplier_id: The ID of the supplier.
+        supplier_name: The name of the supplier.
+        conn: The database connection.
+
+    Returns:
+        bool: True if processing was successful, False otherwise.
+    """
     try:
         print(f"Processing supplier: {supplier_name}")
         supplier_data = process_company_name(supplier_name)
@@ -134,12 +185,20 @@ def process_single_supplier(supplier_id, supplier_name, conn):
 
 # Main function to process suppliers
 def process_suppliers(batch_size: int = 100):
+    """
+    Main function to process suppliers in batches.
+
+    Args:
+        batch_size (int): The number of suppliers to process in one batch. Default is 100.
+    """
     conn = sqlite3.connect("spend_intake2.db", check_same_thread=False)
     cursor = conn.cursor()
 
     try:
+        # Retrieve suppliers without classification codes
         suppliers = get_suppliers_without_classification(cursor, batch_size)
 
+        # Use a thread pool to process suppliers concurrently
         with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
             futures = [
                 executor.submit(
@@ -148,6 +207,7 @@ def process_suppliers(batch_size: int = 100):
                 for supplier_id, supplier_name in suppliers
             ]
 
+            # Count the number of successfully processed suppliers
             successful = sum(
                 future.result() for future in concurrent.futures.as_completed(futures)
             )
@@ -163,4 +223,4 @@ def process_suppliers(batch_size: int = 100):
 
 # Example usage
 if __name__ == "__main__":
-    process_suppliers(200)  # Process 2200 suppliers at a time
+    process_suppliers(200)  # Process 200 suppliers at a time

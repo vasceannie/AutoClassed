@@ -36,3 +36,55 @@ generating human-like text, making it a versatile tool for various applications.
 
 By the end of this notebook, you will have a functional assistant powered by GPT, enhanced with custom functions
 tailored to specific needs. Let's dive in and start building our intelligent assistant!
+
+---
+# Supplier Information Gathering and Update System
+
+## Overview
+
+This system is designed to gather and update information about supplier companies in a database. Its main purpose is to process a list of suppliers that don't have classification information and use AI and web search tools to find and add that missing data.
+
+## Input
+
+- A list of supplier names from a SQLite database
+- Access to a SQLite database file named "spend_intake2.db"
+- API keys for OpenAI and Google Serper stored in environment variables
+
+## Output
+
+Updated supplier information in the database, including:
+- Validity of the supplier
+- Classification code and name
+- Website
+- Additional comments
+
+## Main Steps
+
+1. Set up tools for AI processing and web searching using the OpenAI API and Google Serper API
+2. Define a template for AI queries about supplier information
+3. Create a function to process each company name using AI and search tools
+4. Retrieve a list of suppliers from the database that need classification information
+5. Process each supplier in parallel using multiple threads
+6. Search for information, format results, and update the database for each supplier
+
+## Key Components
+
+### process_suppliers Function
+- Gets a batch of suppliers from the database
+- Uses a thread pool to process multiple suppliers concurrently
+
+### process_single_supplier Function
+- Calls process_company_name to get information
+- Calls update_supplier_info to save data to the database
+
+### process_company_name Function
+- Transforms a company name string into a structured GetSupplierData object
+
+## Error Handling and Reporting
+
+- Ensures that failure in processing one supplier doesn't stop the entire batch
+- Tracks and reports the number of successfully processed suppliers
+
+## Summary
+
+This system automates the process of enriching a supplier database with additional information, leveraging AI and web search capabilities to fill in missing details about each supplier.search capabilities to fill in missing details about each supplier.
