@@ -87,7 +87,7 @@ def get_suppliers_without_classification(cursor, limit: int = 100) -> List[tuple
     cursor.execute(
         """
         SELECT id, supplier_name 
-        FROM supplier_classifications 
+        FROM main.ARS_Supplier_Classification_List 
         WHERE classification_code IS NULL OR classification_code = ''
         LIMIT ?
     """,
@@ -101,7 +101,7 @@ def update_supplier_info(conn, supplier_id, supplier_data):
     cursor = conn.cursor()
     cursor.execute(
         """
-        UPDATE supplier_classifications
+        UPDATE main.ARS_Supplier_Classification_List
         SET valid = ?, classification_code = ?, classification_name = ?, 
             comments = ?, website = ?
         WHERE id = ?
@@ -134,7 +134,7 @@ def process_single_supplier(supplier_id, supplier_name, conn):
 
 # Main function to process suppliers
 def process_suppliers(batch_size: int = 100):
-    conn = sqlite3.connect("spend_intake.db", check_same_thread=False)
+    conn = sqlite3.connect("spend_intake2.db", check_same_thread=False)
     cursor = conn.cursor()
 
     try:
@@ -163,4 +163,4 @@ def process_suppliers(batch_size: int = 100):
 
 # Example usage
 if __name__ == "__main__":
-    process_suppliers(100)  # Process 100 suppliers at a time
+    process_suppliers(200)  # Process 2200 suppliers at a time
