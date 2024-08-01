@@ -143,13 +143,6 @@
             </Attribute>
           </value>
         </entry>
-        <entry key="\data\sample.csv">
-          <value>
-            <Attribute>
-              <option name="separator" value="&#9;" />
-            </Attribute>
-          </value>
-        </entry>
         <entry key="\data\sample_cleaned.csv">
           <value>
             <Attribute>
