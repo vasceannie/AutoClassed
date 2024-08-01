@@ -8,6 +8,11 @@
         <option name="userId" value="4de8c7ec:190b0f3d657:-7ff6" />
       </MTProjectMetadataState>
     </option>
+    <option name="tabsState">
+      <MTProjectTabsConfigState>
+        <option name="enabled" value="true" />
+      </MTProjectTabsConfigState>
+    </option>
     <option name="titleBarState">
       <MTProjectTitleBarConfigState>
         <option name="overrideColor" value="false" />
