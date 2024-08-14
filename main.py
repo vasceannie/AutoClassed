@@ -12,6 +12,8 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 
+# Add sidebar link to profile.py
+st.sidebar.page_link("profile", label="Profile", icon="👤")
 
 def connect_to_database(db_file_path: str) -> sqlite3.Connection:
     """
@@ -97,7 +99,7 @@ def main():
     print("Starting main function")
     st.title("Data Explorer", anchor=None, help=None)
 
-    db_file_path = "spend_intake.db"
+    db_file_path = "spend_intake2.db"
     db_name = "spend_data_raw"
 
     with st.spinner("Loading clean data..."):

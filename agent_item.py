@@ -119,7 +119,7 @@ def get_items_without_classification(cursor, limit: int = 100) -> List[tuple]:
     cursor.execute(
         """
         SELECT id, item_code 
-        FROM main.item_descriptions 
+        FROM main.AP_Items_For_Classification 
         WHERE valid IS NULL OR valid = ''
         LIMIT ?
     """,
@@ -141,7 +141,7 @@ def update_item_info(conn, item_id, item_data):
     cursor = conn.cursor()
     cursor.execute(
         """
-        UPDATE main.item_descriptions
+        UPDATE main.AP_Items_For_Classification
         SET valid = ?, classification_code = ?, classification_name = ?, 
             comments = ?, website = ?
         WHERE id = ?
@@ -220,4 +220,4 @@ def process_items(batch_size: int = 100):
 
 # Example usage
 if __name__ == "__main__":
-    process_items(200)  # Process 200 items at a time
+    process_items(2500)  # Process 200 items at a time
