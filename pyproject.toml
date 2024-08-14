@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "autoclassed"
+version = "0.1.0"
+description = ""
+authors = ["Trav <travis.vas@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+openai = "^1.40.6"
+langchain = "^0.2.13"
+langchain-community = "^0.2.12"
+langchain-openai = "^0.1.21"
+streamlit = "^1.37.1"
+pandas = "^2.2.2"
+pygwalker = "^0.4.9.4"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
