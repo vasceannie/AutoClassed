@@ -2,4 +2,4 @@ spend_intake.db
 /data/
 spend_intake2.db
 /.env
-!/.env
+
