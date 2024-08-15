@@ -41,13 +41,19 @@ class GetItemData(BaseModel):
     comments: str = Field(description="Any additional comments about the item")
 
 
+# Load environment variables from .env file
 load_dotenv()
 
 # Initialize the ChatOpenAI client
-llm = ChatOpenAI(model="gpt-4o-mini", api_key=load_dotenv("OPENAI_API_KEY"))
+llm = ChatOpenAI(model="gpt-4o-mini", api_key=os.getenv("OPENAI_API_KEY"))
 
-# Initialize the GoogleSerperAPIWrapper tool
-google_search = GoogleSerperAPIWrapper(api_key=load_dotenv("SERPER_API_KEY"))
+# Initialize the GoogleSerperAPIWrapper tool with additional parameters
+google_search = GoogleSerperAPIWrapper(
+    api_key=os.getenv("SERPER_API_KEY"),
+    gl="us",  # Set the country code
+    hl="en",  # Set the language
+    type="search",  # Specify the search type
+)
 
 # Create the parser
 parser = PydanticOutputParser(pydantic_object=GetItemData)
@@ -179,13 +185,24 @@ def process_single_item(id, item_code, conn):
     """
     try:
         print(f"Processing item: {item_code}")
-        item_data = process_item_code(item_code)
-        update_item_info(conn, id, item_data)  # Use 'id' for updating
+        
+        # First attempt
+        try:
+            item_data = process_item_code(item_code)
+        except Exception as e:
+            print(f"Error on first attempt for {item_code}: {str(e)}")
+            
+            # Second attempt with modified query
+            modified_item_code = item_code.split('(')[0].strip()  # Remove parentheses and content inside
+            print(f"Retrying with modified item code: {modified_item_code}")
+            item_data = process_item_code(modified_item_code)
+        
+        update_item_info(conn, id, item_data)
         print(f"Updated information for item code {item_code}:")
         print(item_data)
         return True
     except Exception as e:
-        print(f"Error processing item {item_code}: {e}")
+        print(f"Error processing item {item_code}: {str(e)}")
         return False
 
 
@@ -226,4 +243,4 @@ def process_items(batch_size: int = 100):
 
 # Example usage
 if __name__ == "__main__":
-    process_items(2500)  # Process 200 items at a time
+    process_items(5)  # Process 200 items at a time
