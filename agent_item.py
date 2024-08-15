@@ -203,18 +203,18 @@ def process_single_item(id, item_code, conn):
     """
     try:
         print(f"Processing item: {item_code}")
-        
+
         # First attempt
         try:
             item_data = process_item_code(item_code)
         except Exception as e:
             print(f"Error on first attempt for {item_code}: {str(e)}")
-            
+
             # Second attempt with modified query
             modified_item_code = item_code.split('(')[0].strip()  # Remove parentheses and content inside
             print(f"Retrying with modified item code: {modified_item_code}")
             item_data = process_item_code(modified_item_code)
-        
+
         update_item_info(conn, id, item_data)
         print(f"Updated information for item code {item_code}:")
         print(item_data)
@@ -261,4 +261,4 @@ def process_items(batch_size: int = 100):
 
 # Example usage
 if __name__ == "__main__":
-    process_items(5)  # Process 200 items at a time
+    process_items(100)  # Process 200 items at a time
