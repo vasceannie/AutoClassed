@@ -1,0 +1,10 @@
+{
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "driver": "SQLite",
+            "name": "spend_intake2",
+            "database": "spend_intake2.db"
+        }
+    ]
+}

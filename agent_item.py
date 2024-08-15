@@ -13,7 +13,7 @@ from langchain_community.utilities import GoogleSerperAPIWrapper
 from langchain.agents import AgentExecutor, create_openai_functions_agent
 import concurrent.futures
 from dotenv import load_dotenv
-
+import logging
 
 # Your GetItemData class
 class GetItemData(BaseModel):
@@ -131,10 +131,11 @@ def process_item_code(item_code: str) -> GetItemData:
         }
     )
     parsed_data = parser.parse(result["output"])
+    logging.info(f"Processed item {item_code}: {parsed_data}")
     return parsed_data
 
 
-# Function to get items without classification_code
+# Function to get items without classification
 def get_items_without_classification(cursor, limit: int = 100) -> List[tuple]:
     """
     Retrieve items from the database who do not have a classification code.
@@ -150,7 +151,7 @@ def get_items_without_classification(cursor, limit: int = 100) -> List[tuple]:
         """
         SELECT id, item_code 
         FROM main.AP_Items_For_Classification 
-        WHERE valid IS NULL OR valid = ''
+        WHERE valid IS NULL OR valid != '1' or valid != '0'
         LIMIT ?
     """,
         (limit,),
@@ -165,41 +166,57 @@ def update_item_info(conn, item_id, item_data):
 
     Args:
         conn: The database connection.
-        item_id: The ID of the item to update.
+        item_id: The ID of the item to update (as a string).
         item_data: An instance of GetItemData containing the updated data.
     """
     cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            UPDATE main.AP_Items_For_Classification
+            SET valid = ?, classification_code = ?, classification_name = ?, 
+                comments = ?, website = ?
+            WHERE id = ?
+            """,
+            (
+                item_data.validation,
+                item_data.classification_code or None,
+                item_data.classification_name or None,
+                item_data.comments or None,
+                item_data.website or None,
+                item_id,  # Now passing item_id directly as a string
+            ),
+        )
+        affected_rows = cursor.rowcount
+        conn.commit()
+        logging.info(f"Updated item {item_id}. Affected rows: {affected_rows}")
+    except Exception as e:
+        logging.error(f"Error updating item {item_id}: {str(e)}")
+        conn.rollback()
+
+
+def get_classified_count(conn):
+    cursor = conn.cursor()
     cursor.execute(
         """
-        UPDATE main.AP_Items_For_Classification
-        SET valid = ?, classification_code = ?, classification_name = ?, 
-            comments = ?, website = ?
-        WHERE id = ?
-    """,
-        (
-            item_data.validation,
-            item_data.classification_code,
-            item_data.classification_name,
-            item_data.comments,
-            item_data.website,
-            item_id,
-        ),
+        SELECT COUNT(*) 
+        FROM main.AP_Items_For_Classification 
+        WHERE valid IS NOT NULL AND valid != ''
+        """
     )
-    conn.commit()
+    return cursor.fetchone()[0]
 
 
-# Function to process a single item
-def process_single_item(id, item_code, conn):
+def process_single_item(id, item_code):
     """
     Process a single item by retrieving and updating its information.
 
     Args:
         id: The ID of the item.
         item_code: The code of the item.
-        conn: The database connection.
 
     Returns:
-        bool: True if processing was successful, False otherwise.
+        tuple: (bool, GetItemData) - Success status and item data
     """
     try:
         print(f"Processing item: {item_code}")
@@ -211,25 +228,21 @@ def process_single_item(id, item_code, conn):
             print(f"Error on first attempt for {item_code}: {str(e)}")
 
             # Second attempt with modified query
-            modified_item_code = item_code.split('(')[0].strip()  # Remove parentheses and content inside
+            modified_item_code = item_code.split('(')[0].strip()
             print(f"Retrying with modified item code: {modified_item_code}")
             item_data = process_item_code(modified_item_code)
 
-        update_item_info(conn, id, item_data)
-        print(f"Updated information for item code {item_code}:")
-        print(item_data)
-        return True
+        return True, item_data
     except Exception as e:
         print(f"Error processing item {item_code}: {str(e)}")
-        return False
+        return False, None
 
-
-def process_items(batch_size: int = 100):
+def process_items(batch_size: int = 5):
     """
     Main function to process items in batches.
 
     Args:
-        batch_size (int): The number of items to process in one batch. Default is 100.
+        batch_size (int): The number of items to process in one batch. Default is 5.
     """
     conn = sqlite3.connect("spend_intake2.db", check_same_thread=False)
     cursor = conn.cursor()
@@ -241,16 +254,21 @@ def process_items(batch_size: int = 100):
         # Use a thread pool to process items concurrently
         with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
             futures = [
-                executor.submit(process_single_item, id, item_code, conn)
+                executor.submit(process_single_item, str(id), item_code)
                 for id, item_code in items
             ]
 
-            # Count the number of successfully processed items
-            successful = sum(
-                future.result() for future in concurrent.futures.as_completed(futures)
-            )
+            successful = 0
+            for future, (id, _) in zip(concurrent.futures.as_completed(futures), items):
+                success, item_data = future.result()
+                if success and item_data:
+                    update_item_info(conn, id, item_data)
+                    if item_data.classification_code:
+                        successful += 1
+                else:
+                    logging.warning(f"Failed to process item {id}")
 
-        print(f"Successfully processed {successful} out of {len(items)} items")
+        logging.info(f"Successfully processed {successful} out of {len(items)} items")
 
     except Exception as e:
         print(f"An error occurred: {e}")
@@ -258,7 +276,9 @@ def process_items(batch_size: int = 100):
     finally:
         conn.close()
 
-
 # Example usage
 if __name__ == "__main__":
-    process_items(100)  # Process 200 items at a time
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    logging.info("Starting processing")
+    process_items(5)  # Process 100 items at a time
+    logging.info("Processing complete")
