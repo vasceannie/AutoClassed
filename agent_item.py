@@ -2,13 +2,15 @@ import os
 import sqlite3
 from typing import Any, List
 
-from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers import PydanticOutputParser
-from langchain.agents import Tool, AgentExecutor, create_openai_functions_agent
-from langchain.tools import StructuredTool
-from langchain_community.utilities import GoogleSerperAPIWrapper
+from langchain_core.tools import Tool, StructuredTool
 from langchain_core.pydantic_v1 import BaseModel, Field
+
 from langchain_openai import ChatOpenAI
+
+from langchain_community.utilities import GoogleSerperAPIWrapper
+from langchain.agents import AgentExecutor, create_openai_functions_agent
 import concurrent.futures
 from dotenv import load_dotenv
 
