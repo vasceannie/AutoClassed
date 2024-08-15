@@ -1,6 +1,7 @@
 import os
 import sqlite3
 from typing import Any, List
+
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain.agents import Tool, AgentExecutor, create_openai_functions_agent
@@ -9,6 +10,7 @@ from langchain_community.utilities import GoogleSerperAPIWrapper
 from langchain_core.pydantic_v1 import BaseModel, Field
 from langchain_openai import ChatOpenAI
 import concurrent.futures
+from dotenv import load_dotenv
 
 
 # Your GetItemData class
@@ -37,11 +39,13 @@ class GetItemData(BaseModel):
     comments: str = Field(description="Any additional comments about the item")
 
 
+load_dotenv()
+
 # Initialize the ChatOpenAI client
-llm = ChatOpenAI(model="gpt-4o-mini", api_key=os.environ.get("OPENAI_API_KEY"))
+llm = ChatOpenAI(model="gpt-4o-mini", api_key=load_dotenv("OPENAI_API_KEY"))
 
 # Initialize the GoogleSerperAPIWrapper tool
-google_search = GoogleSerperAPIWrapper(api_key=os.environ.get("SERPER_API_KEY"))
+google_search = GoogleSerperAPIWrapper(api_key=load_dotenv("SERPER_API_KEY"))
 
 # Create the parser
 parser = PydanticOutputParser(pydantic_object=GetItemData)

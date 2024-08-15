@@ -16,15 +16,18 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 class EmailData(BaseModel):
     email: str
     type: str
+
 
 class GetItemData(BaseModel):
     company: str
     emails: List[EmailData]
     phone_numbers: List[str]
     address: Optional[str] = None
+
 
 def extract_data_from_json(data: Dict[Any, Any]) -> Dict[str, Any]:
     result = {
@@ -33,7 +36,7 @@ def extract_data_from_json(data: Dict[Any, Any]) -> Dict[str, Any]:
         "phone_numbers": [],
         "address": None
     }
-    
+
     def extract_recursive(obj, current_key=""):
         if isinstance(obj, dict):
             for key, value in obj.items():
@@ -50,9 +53,10 @@ def extract_data_from_json(data: Dict[Any, Any]) -> Dict[str, Any]:
                 result["phone_numbers"].append(str(obj))
             elif "address" in current_key.lower():
                 result["address"] = str(obj)
-    
+
     extract_recursive(data)
     return result
+
 
 def clean_and_parse_output(output: str) -> dict:
     # Try to extract JSON from the output
@@ -68,7 +72,7 @@ def clean_and_parse_output(output: str) -> dict:
             return data
         except json.JSONDecodeError:
             pass
-    
+
     # If JSON extraction fails, create a minimal valid structure
     return {
         'company': 'Unknown',
@@ -76,10 +80,13 @@ def clean_and_parse_output(output: str) -> dict:
         'phone_numbers': []
     }
 
+
 from langchain.prompts import SystemMessagePromptTemplate, HumanMessagePromptTemplate, ChatPromptTemplate
 
+
 def process_item_code(item_code: str, prompt: str) -> str:
-    llm = ChatOpenAI(model="gpt-4o-mini-2024-07-18", api_key=os.environ.get("OPENAI_API_KEY"))  # do not ever modify this line
+    llm = ChatOpenAI(model="gpt-4o-mini-2024-07-18",
+                     api_key=os.environ.get("OPENAI_API_KEY"))  # do not ever modify this line
     google_search = GoogleSerperAPIWrapper(api_key=os.environ.get("SERPER_API_KEY"))
     parser = PydanticOutputParser(pydantic_object=GetItemData)
 
@@ -103,10 +110,10 @@ def process_item_code(item_code: str, prompt: str) -> str:
     )
 
     chat_prompt = ChatPromptTemplate.from_messages([
-        system_message, 
+        system_message,
         human_message,
         MessagesPlaceholder(variable_name="agent_scratchpad")
-        ])
+    ])
 
     agent = create_openai_functions_agent(llm, tools, chat_prompt)
     agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
@@ -122,7 +129,6 @@ def process_item_code(item_code: str, prompt: str) -> str:
         return ""  # Return an empty string or handle the error appropriately
 
 
-
 def get_items_from_csv(csv_file: str) -> list[tuple]:
     items = []
     with open(csv_file, 'r') as file:
@@ -132,13 +138,14 @@ def get_items_from_csv(csv_file: str) -> list[tuple]:
             items.append((row[0], row[1]))
     return items
 
+
 def process_single_item(id, vendor, prompt, output_csv):
     try:
         print(f"Processing vendor: {vendor}")
         item_data = process_item_code(vendor, prompt)
         print(f"Information for vendor {vendor}:")
         print(item_data)
-        
+
         # Parse the JSON data
         parsed_data = clean_and_parse_output(item_data)
 
@@ -156,7 +163,7 @@ def process_single_item(id, vendor, prompt, output_csv):
 
         # Write to CSV
         output_csv.writerow([
-            id, 
+            id,
             company,
             contact_type,
             "N/A",  # contact name
@@ -164,15 +171,16 @@ def process_single_item(id, vendor, prompt, output_csv):
             email,
             "Google Search"  # citation
         ])
-        
+
         return True
     except Exception as e:
         print(f"Error processing vendor {vendor}: {e}")
         return False
 
+
 def process_items(id: str, varlookup: str, csv_file: str, prompt: str):
     items = get_items_from_csv(csv_file)
-    
+
     output_file = 'output_results.csv'
     with open(output_file, 'w', newline='') as csvfile:
         csv_writer = csv.writer(csvfile)
@@ -196,6 +204,7 @@ def process_items(id: str, varlookup: str, csv_file: str, prompt: str):
 
     print(f"Results have been written to {output_file}")
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process items based on input arguments.")
     parser.add_argument("id", help="The ID to process (or 'all' for all items)")
@@ -204,5 +213,5 @@ if __name__ == "__main__":
     parser.add_argument("--prompt", help="The custom prompt to use for processing", default="")
 
     args = parser.parse_args()
-    
+
     process_items(args.id, args.varlookup, args.csv, args.prompt)
