@@ -23,22 +23,22 @@ class GetItemData(BaseModel):
     Attributes:
         item_code (str): The unique code of the item.
         validation (bool): Whether the item is valid.
-        classification_code (str): The UNSPSC classification code of the item.
-        classification_name (str): The UNSPSC classification name of the item.
-        website (str): The website related to the item.
-        comments (str): Any additional comments about the item.
+        classification_code (str | None): The UNSPSC classification code of the item.
+        classification_name (str | None): The UNSPSC classification name of the item.
+        website (str | None): The website related to the item.
+        comments (str | None): Any additional comments about the item.
     """
 
     item_code: str = Field(description="The unique code of the item")
     validation: bool = Field(description="Whether the item is valid")
-    classification_code: str = Field(
-        description="The UNSPSC classification code of the item"
+    classification_code: str | None = Field(
+        description="The UNSPSC classification code of the item", default=None
     )
-    classification_name: str = Field(
-        description="The UNSPSC classification name of the item"
+    classification_name: str | None = Field(
+        description="The UNSPSC classification name of the item", default=None
     )
-    website: str = Field(description="The website related to the item")
-    comments: str = Field(description="Any additional comments about the item")
+    website: str | None = Field(description="The website related to the item", default=None)
+    comments: str | None = Field(description="Any additional comments about the item", default=None)
 
 
 # Load environment variables from .env file
@@ -103,7 +103,25 @@ def process_item_code(item_code: str) -> GetItemData:
         )
     ]
 
-    agent = create_openai_functions_agent(llm, tools, prompt)
+    # Update the system message in the prompt
+    updated_prompt = ChatPromptTemplate.from_messages([
+        ("system", "You are an AI assistant tasked with gathering information about items."),
+        ("human", "I need information on an item with the code: {item_code}"),
+        ("system", "Certainly! I'll use the available tools to search for information about the item with code {item_code}. "
+                   "Please provide only factual information that you can verify. If you cannot find specific information, "
+                   "leave the field empty or set it to None. Do not generate or guess any information. "
+                   "Provide the following details:\n"
+                   "1. Validation of whether it's a valid item (true only if you can confirm it exists)\n"
+                   "2. The UNSPSC classification code (if available)\n"
+                   "3. The UNSPSC classification name (if available)\n"
+                   "4. The website (if a reliable source is found)\n"
+                   "5. Any additional relevant comments (factual information only)\n\n"
+                   "Format the information as follows:\n"
+                   "{format_instructions}"),
+        MessagesPlaceholder(variable_name="agent_scratchpad"),
+    ])
+
+    agent = create_openai_functions_agent(llm, tools, updated_prompt)
     agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
 
     result = agent_executor.invoke(
