@@ -69,13 +69,15 @@ prompt = ChatPromptTemplate.from_messages(
         (
             "system",
             "Certainly! I'll use the available tools to search for information about the item with code {item_code}. "
-            "I'll provide the following details:\n"
-            "1. Validation of whether it's a valid item\n"
-            "2. The UNSPSC classification code\n"
-            "3. The UNSPSC classification name\n"
-            "4. The website\n"
-            "5. Any additional relevant comments\n\n"
-            "I'll format the information as follows:\n"
+            "Please provide only factual information that you can verify. If you cannot find specific information, "
+            "leave the field empty or set it to None. Do not generate or guess any information. "
+            "Provide the following details:\n"
+            "1. Validation of whether it's a valid item (true only if you can confirm it exists)\n"
+            "2. The UNSPSC classification code (if available)\n"
+            "3. The UNSPSC classification name (if available)\n"
+            "4. The website (if a reliable source is found)\n"
+            "5. Any additional relevant comments (factual information only)\n\n"
+            "Format the information as follows:\n"
             "{format_instructions}",
         ),
         MessagesPlaceholder(variable_name="agent_scratchpad"),
@@ -135,31 +137,26 @@ def process_item_code(item_code: str) -> GetItemData:
     return parsed_data
 
 
-# Function to get items without classification
-def get_items_without_classification(cursor, limit: int = 100) -> List[tuple]:
+def get_items_to_process(cursor, batch_size):
     """
-    Retrieve items from the database who do not have a classification code.
+    Retrieve items that need processing from the database.
 
     Args:
         cursor: The database cursor.
-        limit (int): The number of items to retrieve. Default is 100.
+        batch_size (int): The number of items to retrieve.
 
     Returns:
-        List[tuple]: A list of tuples containing item IDs and codes.
+        list: A list of tuples containing (id, item_code) for items to process.
     """
-    cursor.execute(
-        """
-        SELECT id, item_code 
-        FROM main.AP_Items_For_Classification 
-        WHERE valid IS NULL OR valid != '1' or valid != '0'
-        LIMIT ?
-    """,
-        (limit,),
-    )
+    query = """
+    SELECT id, item_code
+    FROM main.AP_Items_For_Classification
+    WHERE valid IS NULL
+    LIMIT ?
+    """
+    cursor.execute(query, (batch_size,))
     return cursor.fetchall()
 
-
-# Function to update item information in the database
 def update_item_info(conn, item_id, item_data):
     """
     Update item information in the database.
@@ -237,38 +234,40 @@ def process_single_item(id, item_code):
         print(f"Error processing item {item_code}: {str(e)}")
         return False, None
 
-def process_items(batch_size: int = 5):
-    """
-    Main function to process items in batches.
-
-    Args:
-        batch_size (int): The number of items to process in one batch. Default is 5.
-    """
+def process_items(batch_size: int = 5, max_items: int = 5):
     conn = sqlite3.connect("spend_intake2.db", check_same_thread=False)
     cursor = conn.cursor()
 
     try:
-        # Retrieve items without classification codes
-        items = get_items_without_classification(cursor, batch_size)
+        total_processed = 0
+        while total_processed < max_items:
+            # Retrieve items that need processing
+            items = get_items_to_process(cursor, min(batch_size, max_items - total_processed))
 
-        # Use a thread pool to process items concurrently
-        with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
-            futures = [
-                executor.submit(process_single_item, str(id), item_code)
-                for id, item_code in items
-            ]
+            if not items:
+                logging.info("No more items to process. Exiting.")
+                break
 
-            successful = 0
-            for future, (id, _) in zip(concurrent.futures.as_completed(futures), items):
-                success, item_data = future.result()
-                if success and item_data:
-                    update_item_info(conn, id, item_data)
-                    if item_data.classification_code:
-                        successful += 1
-                else:
-                    logging.warning(f"Failed to process item {id}")
+            # Use a thread pool to process items concurrently
+            with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
+                futures = [
+                    executor.submit(process_single_item, str(id), item_code)
+                    for id, item_code in items
+                ]
 
-        logging.info(f"Successfully processed {successful} out of {len(items)} items")
+                processed = 0
+                for future, (id, _) in zip(concurrent.futures.as_completed(futures), items):
+                    success, item_data = future.result()
+                    if success and item_data:
+                        update_item_info(conn, float(id), item_data)
+                    processed += 1
+                    logging.info(f"Processed item {id}: {'Success' if success else 'Failed'}")
+
+            total_processed += processed
+            logging.info(f"Processed {processed} out of {len(items)} items")
+            logging.info(f"Total processed: {total_processed}")
+
+        logging.info(f"Reached maximum number of items to process ({max_items}). Exiting.")
 
     except Exception as e:
         print(f"An error occurred: {e}")
@@ -280,5 +279,5 @@ def process_items(batch_size: int = 5):
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     logging.info("Starting processing")
-    process_items(5)  # Process 100 items at a time
+    process_items(batch_size=1000, max_items=1000)  # Process up to 5 items total
     logging.info("Processing complete")
