@@ -3,6 +3,7 @@
   <component name="CsvFileAttributes">
     <option name="attributeMap">
       <map>
+<<<<<<< HEAD
         <entry key="C:\Users\Trav\miniconda3\Lib\site-packages\numpy\core\tests\data\umath-validation-set-arccos.csv">
           <value>
             <Attribute>
@@ -11,6 +12,9 @@
           </value>
         </entry>
         <entry key="C:\Users\Trav\miniconda3\Lib\site-packages\numpy\core\tests\data\umath-validation-set-arccosh.csv">
+=======
+        <entry key="\data\sample.csv">
+>>>>>>> parent of abd3006 (sup)
           <value>
             <Attribute>
               <option name="separator" value="," />

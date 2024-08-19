@@ -9,10 +9,13 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="dropbase" />
   </component>
+<<<<<<< HEAD
   <component name="PackageRequirementsSettings">
     <option name="removeUnused" value="true" />
     <option name="modifyBaseFiles" value="true" />
   </component>
+=======
+>>>>>>> parent of abd3006 (sup)
   <component name="PyDocumentationSettings">
     <option name="format" value="NUMPY" />
     <option name="myDocStringFormat" value="NumPy" />
