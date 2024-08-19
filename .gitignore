@@ -9,4 +9,10 @@ spend_intake2.db
 .vscode
 .DS_Store
 ```
+=======
+!/data/Spend_Intake_010124_063024.csv!/data/spend_intake.db
+!/spend_intake.db
+!/data/
+!/spend_intake2.db
+!/Archive/!/data/Spend_Intake_010123_123123_071024.csv
 >>>>>>> parent of 4d8d528 (split & clean)
