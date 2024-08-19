@@ -2,6 +2,20 @@ import streamlit as st
 from pygwalker.api.streamlit import StreamlitRenderer
 import pandas as pd
 import sqlite3
+<<<<<<< HEAD
+=======
+import logging
+
+logging.basicConfig(
+    level=logging.ERROR,
+    filename="app.log",
+    filemode="a",
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+
+# Add sidebar link to profile.py
+st.sidebar.page_link("profile", label="Profile", icon="👤")
+>>>>>>> parent of 4d8d528 (split & clean)
 
 def connect_to_database(db_file_path: str) -> sqlite3.Connection:
     try:
