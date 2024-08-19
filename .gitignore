@@ -1,6 +1,6 @@
 <<<<<<< HEAD
 spend_intake.db
-/data/
+/data/*
 spend_intake2.db
 .env
 /.idea/
