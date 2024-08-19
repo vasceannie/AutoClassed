@@ -5,9 +5,8 @@
       <excludeFolder url="file://$MODULE_DIR$/models" />
       <excludeFolder url="file://$MODULE_DIR$/venv" />
     </content>
-    <orderEntry type="jdk" jdkName="C:\Users\Trav\miniconda3" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Poetry (AutoClassed)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module" module-name="dropbase" />
   </component>
 <<<<<<< HEAD
 <<<<<<< HEAD
