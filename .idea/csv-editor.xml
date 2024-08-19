@@ -4,6 +4,7 @@
     <option name="attributeMap">
       <map>
 <<<<<<< HEAD
+<<<<<<< HEAD
         <entry key="C:\Users\Trav\miniconda3\Lib\site-packages\numpy\core\tests\data\umath-validation-set-arccos.csv">
           <value>
             <Attribute>
@@ -13,6 +14,8 @@
         </entry>
         <entry key="C:\Users\Trav\miniconda3\Lib\site-packages\numpy\core\tests\data\umath-validation-set-arccosh.csv">
 =======
+=======
+>>>>>>> parent of abd3006 (sup)
         <entry key="\data\sample.csv">
 >>>>>>> parent of abd3006 (sup)
           <value>
