@@ -133,10 +133,7 @@ def process_item_code(item_code: str) -> GetItemData:
         }
     )
     parsed_data = parser.parse(result["output"])
-<<<<<<< HEAD
     logging.info(f"Processed item {item_code}: {parsed_data}")
-=======
->>>>>>> parent of 4d8d528 (split & clean)
     return parsed_data
 
 
@@ -280,11 +277,7 @@ def process_items(batch_size: int = 5, max_items: int = 5):
 
 # Example usage
 if __name__ == "__main__":
-<<<<<<< HEAD
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     logging.info("Starting processing")
     process_items(batch_size=1000, max_items=1000)  # Process up to 5 items total
     logging.info("Processing complete")
-=======
-    process_items(2500)  # Process 200 items at a time
->>>>>>> parent of 4d8d528 (split & clean)
