@@ -3,7 +3,8 @@ spend_intake.db
 /data/
 spend_intake2.db
 .env
-.idea
+/.idea/
+.idea/
 .pytest_cache
 .streamlit
 .vscode
